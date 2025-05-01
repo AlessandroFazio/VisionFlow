@@ -1,0 +1,23 @@
+[project]
+name = "visionflow"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Alessandro Fazio",email = "fazioale2000@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+[tool.poetry]
+packages = [{include = "visionflow", from = "src"}]
+
+
+[tool.poetry.dependencies]
+inference = "^0.48.0"
+supervision = "^0.25.1"
+numpy = "^2.2.5"
+pytesseract = "^0.3.13"
+pandas = "^2.2.3"
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
