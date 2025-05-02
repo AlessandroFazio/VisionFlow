@@ -4,12 +4,10 @@ from visionflow.core.pipeline.base import Exchange, StepBase
 
 
 class DetectStep(StepBase):
-    def __init__(self, service: DetectionServiceBase, in_key: str, out_key: str) -> None:
+    def __init__(self, service: DetectionServiceBase) -> None:
         self.service = service
-        super().__init__(name="detect", in_key=in_key, out_key=out_key)
+        super().__init__(name="detect")
 
     def process(self, exchange: Exchange) -> Exchange:
-        image = exchange.images[self.in_key]
-        detections = self.service.detect(image)
-        exchange.detections[self.out_key] = detections
+        exchange.detections = self.service.detect(exchange.image)
         return exchange

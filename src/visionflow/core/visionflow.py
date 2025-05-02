@@ -13,9 +13,12 @@ class VisionFlowConfig(BaseModel):
 
 
 class VisionFlow:
-    @classmethod
-    def pipeline_builder(cls, config: VisionFlowConfig) -> PipelineBuilder:
+    def __init__(self, config: VisionFlowConfig) -> None:
+        self.config = config
+
+    def builder(self, pipeline_name: str) -> PipelineBuilder:
         builder = PipelineBuilder(
-            services={InferenceServiceFactory.create(m) for m in config.models}
+            name=pipeline_name,
+            services={InferenceServiceFactory.create(m) for m in self.config.models}
         )
         return builder

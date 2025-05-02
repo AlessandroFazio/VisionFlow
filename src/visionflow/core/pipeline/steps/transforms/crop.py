@@ -1,24 +1,24 @@
 # visionflow/core/pipeline/steps/crop_image.py
-import numpy as np
-from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
+from visionflow.core.types import XyXyType
 
+    
+class StaticCoordinatesProvider(CoordinatesProviderBase):
+    def __init__(self, xyxy: XyXyType) -> None:
+        self.xyxy = xyxy
 
-class DynamicCropStep(StepBase):
-    def __init__(self, roi: str, in_key: str, out_key: str) -> None:
-        self.roi = roi
-        super().__init__(name="dynamic_crop", in_key=in_key, out_key=out_key)
+    def get(self, _: Exchange) -> XyXyType:
+        return self.xyxy
 
-    def _crop(self, detection: DetectionResult, img: np.ndarray) -> np.ndarray:
-        x1, y1, x2, y2 = detection.xyxy
-        return img[y1:y2, x1:x2]
+class CropStep(StepBase):
+    def __init__(self, provider: CoordinatesProviderBase) -> None:
+        super().__init__(name="crop")
+        self.provider = provider
 
     def process(self, exchange: Exchange) -> Exchange:
-        images = exchange.images[self.in_key]
-        if self.roi == "detection_box":
-            detections = exchange.detections[self.in_key]
-            for detections in detections:
-                cropped = [self._crop(detection, img) for detection in   ]
-        return img[y1:y2, x1:x2]
+        x1, y1, x2, y2 = self.provider.get(exchange)
+        exchange.image = exchange.image[y1:y2, x1:x2]
+        return exchange
 
 
