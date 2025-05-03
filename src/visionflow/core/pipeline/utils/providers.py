@@ -13,3 +13,11 @@ class CoordinatesProviderBase(ABC):
 class DetectionCoordinatesProvider(CoordinatesProviderBase):
     def get(self, exchange: Exchange) -> XyXyType:
         return exchange.detections[0].xyxy
+
+
+class StaticCoordinatesProvider(CoordinatesProviderBase):
+    def __init__(self, xyxy: XyXyType) -> None:
+        self.xyxy = xyxy
+
+    def get(self, _: Exchange) -> XyXyType:
+        return self.xyxy

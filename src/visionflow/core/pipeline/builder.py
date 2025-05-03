@@ -11,14 +11,14 @@ from visionflow.core.pipeline.steps.misc.split_by import SplitByStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
-from visionflow.core.pipeline.steps.misc.observer import ObserverStep
+from visionflow.core.pipeline.steps.misc.apply import ApplyStep
 from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
 from visionflow.core.pipeline.steps.transforms.mask import MaskStep
-from visionflow.core.pipeline.steps.transforms.crop import CropStep, StaticCoordinatesProvider
+from visionflow.core.pipeline.steps.transforms.crop import CropStep
 from visionflow.core.pipeline.steps.transforms.resize import ResizeStep
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase, DetectionClassMatcher
 from visionflow.core.pipeline.utils.multiplexers import DetectionMultiplexer, ExchangeMultiplexerBase
-from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider
+from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
 from visionflow.core.types import XyXyType
 
 
@@ -84,8 +84,8 @@ class PipelineBuilder:
         )
         return self._split_builder
 
-    def on_complete(self, callback: Callable[[Exchange], None]) -> "PipelineBuilder":
-        return self.then(ObserverStep(callback))
+    def apply(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
+        return self.then(ApplyStep(fn))
 
     def build(self) -> Pipeline:
         pipeline = Pipeline(self.name, self._steps)

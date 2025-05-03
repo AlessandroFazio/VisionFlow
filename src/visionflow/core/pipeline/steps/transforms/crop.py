@@ -1,15 +1,7 @@
 # visionflow/core/pipeline/steps/crop_image.py
 from visionflow.core.pipeline.base import Exchange, StepBase
 from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
-from visionflow.core.types import XyXyType
 
-    
-class StaticCoordinatesProvider(CoordinatesProviderBase):
-    def __init__(self, xyxy: XyXyType) -> None:
-        self.xyxy = xyxy
-
-    def get(self, _: Exchange) -> XyXyType:
-        return self.xyxy
 
 class CropStep(StepBase):
     def __init__(self, provider: CoordinatesProviderBase) -> None:
