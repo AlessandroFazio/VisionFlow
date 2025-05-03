@@ -1,19 +1,19 @@
+from typing import List
 import pandas as pd
 from visionflow.core.inference.mixins.tesseract import TesseractMixin
-from visionflow.core.inference.ocr.base import OcrDetection, OcrResult, OcrServiceBase
+from visionflow.core.inference.ocr.base import OcrResult, OcrServiceBase
 
 import numpy as np
 import pytesseract
 
 
 class LocalTesseractService(OcrServiceBase, TesseractMixin):
-    def extract(self, img: np.ndarray) -> OcrResult:
+    def extract(self, img: np.ndarray) -> List[OcrResult]:
         df: pd.DataFrame = pytesseract.image_to_data(
             img, lang=self.lang, config=self.config, output_type='data.frame'
         )
-        return OcrResult(
-            detections=[
-                OcrDetection(
+        return [
+            OcrResult(
                     height=d["height"],
                     width=d["width"],
                     left=d["left"],
@@ -24,7 +24,7 @@ class LocalTesseractService(OcrServiceBase, TesseractMixin):
                     confidence=d["conf"],
                     text=d["text"]
                 ) for d in df.to_dict('records')
-            ])
+            ]
 
     @property
     def config(self) -> str:

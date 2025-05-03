@@ -1,5 +1,5 @@
 # visionflow/core/pipeline/steps/filter_detections.py
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
 class FilterStep(StepBase):
@@ -8,7 +8,7 @@ class FilterStep(StepBase):
         self.min_confidence = min_confidence
         self.category = category
 
-    def process(self, exchange: Exchange) -> Exchange:
+    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         items = [
             item for item in getattr(exchange, self.category, [])
             if item.confidence >= self.min_confidence

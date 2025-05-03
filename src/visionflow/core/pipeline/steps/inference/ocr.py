@@ -1,7 +1,7 @@
 # visionflow/core/pipeline/steps/ocr_extract.py
 
 from visionflow.core.inference.ocr.base import OcrServiceBase
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
 class OcrStep(StepBase):
@@ -9,6 +9,6 @@ class OcrStep(StepBase):
         super().__init__(name="ocr")
         self.service = service
 
-    def process(self, exchange: Exchange) -> Exchange:
+    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         exchange.ocr_results = self.service.extract(exchange.image)
         return exchange

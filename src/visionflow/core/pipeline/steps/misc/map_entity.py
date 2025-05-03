@@ -1,5 +1,5 @@
 from typing import Type
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
 class MapEntityStep(StepBase):
@@ -7,6 +7,6 @@ class MapEntityStep(StepBase):
         self.cls = cls
         super().__init__(name="map_entity")
 
-    def process(self, exchange: Exchange) -> Exchange:
+    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         exchange.private["object"] = ...
         return exchange

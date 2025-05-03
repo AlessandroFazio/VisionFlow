@@ -5,13 +5,14 @@ from typing import Callable, Dict, List, Optional, Tuple
 import cv2
 
 from visionflow.core.inference.base import InferenceServiceBase
-from visionflow.core.pipeline.base import Exchange, StepBase, Pipeline
+from visionflow.core.pipeline.base import Exchange, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
 from visionflow.core.pipeline.steps.misc.split_by import SplitByStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
-from visionflow.core.pipeline.steps.misc.apply import ApplyStep
+from visionflow.core.pipeline.steps.misc.process import ProcessStep
+from visionflow.core.pipeline.steps.pipeline import Pipeline
 from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
 from visionflow.core.pipeline.steps.transforms.mask import MaskStep
 from visionflow.core.pipeline.steps.transforms.crop import CropStep
@@ -85,7 +86,7 @@ class PipelineBuilder:
         return self._split_builder
 
     def apply(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
-        return self.then(ApplyStep(fn))
+        return self.then(ProcessStep(fn))
 
     def build(self) -> Pipeline:
         pipeline = Pipeline(self.name, self._steps)

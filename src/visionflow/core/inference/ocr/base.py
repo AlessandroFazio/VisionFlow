@@ -1,13 +1,14 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 import numpy as np
+
 from visionflow.core.inference.base import InferenceServiceBase
 
 
 @dataclass
-class OcrDetection:
+class OcrResult:
     page: int
     paragraph: int
     line: int
@@ -20,12 +21,7 @@ class OcrDetection:
     text: str
 
 
-@dataclass
-class OcrResult:
-    detections: List[OcrDetection]
-
-
 class OcrServiceBase(InferenceServiceBase):
     @abstractmethod
-    def extract(self, img: np.ndarray) -> OcrResult:
+    def extract(self, img: np.ndarray) -> List[OcrResult]:
         pass

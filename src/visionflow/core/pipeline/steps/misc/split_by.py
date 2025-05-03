@@ -1,7 +1,7 @@
 from typing import Dict, Callable
 
 from prefect import task
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase
 from visionflow.core.pipeline.utils.multiplexers import ExchangeMultiplexerBase
 
@@ -21,8 +21,9 @@ class SplitByStep(StepBase):
 
     def _dispatch(
         self,
+        context: PipelineContext,
         exchange: Exchange,
-        executors: Dict[str, Callable[[Exchange], Exchange]]
+        executors: Dict[str, Callable[[PipelineContext, Exchange], Exchange]]
     ) -> Exchange:
         for ex in self.multiplexer.multiplex(exchange):
             key, branch = self.matcher.match(ex, self.branch_keys)
@@ -32,19 +33,19 @@ class SplitByStep(StepBase):
             exec_id = branch._execution_id()
             exchange.execution_id = exec_id
             executor = executors[key]
-            exchange.children[exec_id] = executor(ex)
+            exchange = executor(context, ex)
         
         return exchange
 
-    def process(self, exchange: Exchange) -> Exchange:
+    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         python_routes = {n: route.process for n, route in self.branches.items()}
-        return self._dispatch(exchange, python_routes)
+        return self._dispatch(context, exchange, python_routes)
 
     def to_prefect(self) -> task:
         prefect_routes = {n: step.to_prefect() for n, step in self.branches.items()}
 
         @task(name=self.name)
-        def step_task(exchange: Exchange) -> Exchange:
-            return self._dispatch(exchange, prefect_routes)
+        def step_task(context: PipelineContext, exchange: Exchange) -> Exchange:
+            return self._dispatch(context, exchange, prefect_routes)
 
         return step_task

@@ -1,12 +1,12 @@
 from typing import Callable
 
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
-class ApplyStep(StepBase):
+class ProcessStep(StepBase):
     def __init__(self, fn: Callable[[Exchange], Exchange]) -> None:
         self.fn = fn
         super().__init__(name=f"observer[{fn.__name__}]")
 
-    def process(self, exchange: Exchange) -> Exchange:
+    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         return self.fn(exchange)
