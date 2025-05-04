@@ -1,10 +1,58 @@
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 
-if TYPE_CHECKING:
-    from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.reflection.types import ClassificationLabelConverter, OcrRegexConverter
+from visionflow.core.common.coordinates.providers import CoordinatesStrategyBase
+from visionflow.core.entity.parent_selector.base import ParentSelectorBase
+from visionflow.core.entity.reflection.types import ClassificationLabelConverter, EntityRefConverter, OcrRegexConverter
+from visionflow.core.entity.sort.base import EntitySortStrategy
+
+
+@dataclass
+class FieldTypeInfo:
+    raw_type: Any
+    base_type: Type
+    is_list: bool
+    is_optional: bool
+    elements_optional: bool
+
+    @classmethod
+    def from_type_hint(cls, hint: Any) -> "FieldTypeInfo":
+        original_hint = hint
+        is_optional = False
+        is_list = False
+        elements_optional = False
+
+        # Unwrap Optional[...] at outer level
+        if get_origin(hint) is Union:
+            args = get_args(hint)
+            if type(None) in args:
+                non_none = [arg for arg in args if arg is not type(None)]
+                if len(non_none) == 1:
+                    hint = non_none[0]
+                    is_optional = True
+
+        # Handle List[...] or List[Optional[...]]
+        if get_origin(hint) in (list, List):
+            is_list = True
+            inner_hint = get_args(hint)[0]
+
+            if get_origin(inner_hint) is Union and type(None) in get_args(inner_hint):
+                elements_optional = True
+                base_type = [arg for arg in get_args(inner_hint) if arg is not type(None)][0]
+            else:
+                base_type = inner_hint
+
+        else:
+            base_type = hint
+
+        return cls(
+            raw_type=original_hint,
+            base_type=base_type,
+            is_list=is_list,
+            is_optional=is_optional,
+            elements_optional=elements_optional
+        )
 
 
 @dataclass
@@ -13,24 +61,45 @@ class OcrRegexConfig:
     line_match: bool
     stop_on_first_match: bool
 
+
 @dataclass
 class ClassificationLabelConfig:
     allowed_labels: Optional[List[str]] = None
+
+
+@dataclass
+class EntityRefConfig:
+    sort_strategy: Optional[EntitySortStrategy] = None
+
 
 class FieldType(Enum):
     OCR_REGEX = 0
     CLASSIFICATION_LABEL = 1
     ENTITY_REF = 2
 
+
 @dataclass
 class FieldMeta:
     field_type: FieldType
-    type_hint: Any
+    type_info: FieldTypeInfo
     priority: int
-    converter: Union[OcrRegexConverter | ClassificationLabelConverter]
-    config: Union[ClassificationLabelConfig | OcrRegexConfig | None] = None
+    converter: Union[OcrRegexConverter | ClassificationLabelConverter | EntityRefConverter]
+    config: Union[ClassificationLabelConfig | OcrRegexConfig | EntityRefConfig | None] = None
+
+
+class EntityType(Enum):
+    LOGICAL = "logical"
+    PHYSICAL = "physical"
+
+
+@dataclass
+class EntitySource:
+    type: EntityType
+    provider: Optional[CoordinatesStrategyBase] = None
+
 
 @dataclass
 class EntityMeta:
-    branch_binding: Optional[str] = None
+    source: EntitySource
+    parent_selector: Optional[ParentSelectorBase] = None
     fields: Dict[str, FieldMeta] = field(default_factory=dict)

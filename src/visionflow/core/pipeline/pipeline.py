@@ -25,7 +25,13 @@ class Pipeline(StepBase):
 
     def run(self, img_bytes: bytes) -> Exchange:
         img = self._load_image(img_bytes)
-        return self.process(self.context, Exchange(self._execution_id(), image=img))
+        img_h, img_w = img.shape[:2]
+        exchange = Exchange(
+            execution_id=self._execution_id(), 
+            image=img, 
+            original_image_shape=(img_w, img_h)
+        )
+        return self.process(self.context, exchange)
     
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         return self._dispatch(context, exchange, [step.process for step in self.steps])

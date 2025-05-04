@@ -1,21 +1,25 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 
 from visionflow.core.pipeline.base import Exchange
-from visionflow.core.types import XyXyType
+from visionflow.core.common.types import XyXyType
 
 
-class CoordinatesProviderBase(ABC):
+class CoordinatesStrategyBase(ABC):
     @abstractmethod
     def get(self, exchange: Exchange) -> XyXyType:
         pass
 
+    def __call__(self, exchange: Exchange) -> XyXyType:
+        return self.get(exchange)
 
-class DetectionCoordinatesProvider(CoordinatesProviderBase):
+
+class DetectionCoordinatesProvider(CoordinatesStrategyBase):
     def get(self, exchange: Exchange) -> XyXyType:
         return exchange.detections[0].xyxy
 
 
-class StaticCoordinatesProvider(CoordinatesProviderBase):
+class StaticCoordinatesProvider(CoordinatesStrategyBase):
     def __init__(self, xyxy: XyXyType) -> None:
         self.xyxy = xyxy
 

@@ -6,25 +6,28 @@ import cv2
 
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.factory import EntityFactory
-from visionflow.core.entity.registry import EntityRegistry
+from visionflow.core.entity.registry.base import EntityRegistryBase
+from visionflow.core.entity.registry.registries import HierarchicalEntityRegistry
+from visionflow.core.entity.registry.visitors import EntityRegistryResolver
 from visionflow.core.inference.base import InferenceServiceBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
-from visionflow.core.pipeline.steps.misc.build_entity import BuildEntityStep
-from visionflow.core.pipeline.steps.misc.split_by import SplitByStep
+from visionflow.core.pipeline.steps.entity.build_entity import BuildEntityStep
+from visionflow.core.pipeline.steps.entity.resolve_entity import ResolveEntityStep
+from visionflow.core.pipeline.steps.functional.split_by import SplitByStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
-from visionflow.core.pipeline.steps.misc.process import ProcessStep
-from visionflow.core.pipeline.steps.pipeline import Pipeline
+from visionflow.core.pipeline.steps.functional.process import ProcessStep
+from visionflow.core.pipeline.pipeline import Pipeline
 from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
 from visionflow.core.pipeline.steps.transforms.mask import MaskStep
 from visionflow.core.pipeline.steps.transforms.crop import CropStep
 from visionflow.core.pipeline.steps.transforms.resize import ResizeStep
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase, DetectionClassMatcher
 from visionflow.core.pipeline.utils.multiplexers import DetectionMultiplexer, ExchangeMultiplexerBase
-from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
-from visionflow.core.types import XyXyType
+from visionflow.core.common.coordinates.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
+from visionflow.core.common.types import XyXyType
 
 
 class PipelineBuilder:
@@ -100,11 +103,14 @@ class PipelineBuilder:
         self._root_entity_cls = entity_cls
         return self
     
+    def resolve_entity(self) -> "PipelineBuilder":
+        return self.then(ResolveEntityStep(EntityRegistryResolver.default()))
+    
     def _build_context(self) -> PipelineContext:
         context = PipelineContext()
         if self._root_entity_cls:
-            registry = EntityRegistry.from_root_cls(self._root_entity_cls)
-            context.put(EntityRegistry.pipeline_ctx_key(), registry)
+            registry = HierarchicalEntityRegistry.from_root_class(self._root_entity_cls)
+            context.put(EntityRegistryBase.pipeline_ctx_key(), registry)
         return context
 
     def build(self) -> Pipeline:

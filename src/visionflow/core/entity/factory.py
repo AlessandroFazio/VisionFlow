@@ -1,8 +1,9 @@
 from typing import Dict, Type
 
 from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.processors import ClassificationLabelProcessor, EntityRefProcessor, FieldProcessorBase, OcrRegexProcessor
-from visionflow.core.entity.reflection.meta import FieldType
+from visionflow.core.entity.reflection.processors import ClassificationLabelProcessor, EntityRefProcessor, FieldProcessorBase, OcrRegexProcessor
+from visionflow.core.entity.reflection.meta import EntityType, FieldType
+from visionflow.core.entity.utils import Entity
 from visionflow.core.pipeline.base import Exchange
 
 
@@ -17,10 +18,20 @@ class EntityFactory:
         self._entity_cls = entity_cls
 
     def from_exchange(self, exchange: Exchange) -> EntityBase:
-        fields = self._entity_cls.__vf_meta__.fields
-        kwargs = {}
-        for fname, meta in fields.items():
+        entity_meta = Entity.meta(self._entity_cls)
+        coordinates, kwargs = None, {}
+        
+        for fname, meta in entity_meta.fields.items():
             processor = self._processors[meta.field_type]
             kwargs[fname] = processor.process(meta, exchange)
-        return self._entity_cls(**kwargs)
+        
+        if entity_meta.source.type == EntityType.PHYSICAL:
+            coordinates = entity_meta.source.provider(exchange)
+            img_shape = exchange.original_image_shape
+
+        return self._entity_cls(
+            __vf_xy__=coordinates, 
+            __vf_img_shape__=img_shape, 
+            **kwargs
+        )
     

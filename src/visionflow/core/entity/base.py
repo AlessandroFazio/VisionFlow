@@ -1,31 +1,17 @@
-from typing import Iterator, Type, get_type_hints
+from typing import TYPE_CHECKING, Optional, Tuple, Type, Union, get_type_hints
 
 from anthropic import BaseModel
 from pydantic import create_model
 
-from visionflow.core.entity.reflection.meta import EntityMeta, FieldType
+from visionflow.core.common.types import XyXyType
 
-
-class Entity:
-    @staticmethod
-    def name(entity_cls: Type["EntityBase"]) -> str:
-        return entity_cls.__name__
-    
-    @staticmethod
-    def meta(entity_cls: Type["EntityBase"]) -> EntityMeta:
-        return entity_cls.__vf_meta__
-    
-    @staticmethod
-    def iter_children(entity_cls: Type["EntityBase"]) -> Iterator[Type["EntityBase"]]:
-        fields = entity_cls.__vf_meta__.fields
-        for meta in fields.values():
-            if meta.field_type == FieldType.ENTITY_REF:
-                yield meta.type_hint
+if TYPE_CHECKING:
+    from visionflow.core.entity.reflection.meta import EntityMeta, EntityType
 
 
 class EntityBase:
     __vf_pydantic_model__: Type[BaseModel] = None
-    __vf_meta__: EntityMeta = EntityMeta()
+    __vf_meta__: "EntityMeta" = None
 
     @classmethod
     def __pydantic_model(cls) -> Type[BaseModel]:
@@ -48,12 +34,24 @@ class EntityBase:
         cls.__vf_pydantic_model__ = pyd_cls
         return pyd_cls
     
-    def __init__(self, **kwargs) -> None:
+    def __init__(
+        self, 
+        __vf_xy__: Optional[XyXyType]=None,
+        __vf_img_shape__: Optional[Tuple[int, int]]=None,
+        **kwargs
+    ) -> None:
         field_names = set(self.__vf_meta__.fields.keys())
         for name, obj in kwargs.items():
             if name not in field_names:
                 raise ValueError("")
             setattr(self, name, obj)
+        self.__vf_xy__ = __vf_xy__
+        self.__vf_img_shape__ = __vf_img_shape__
+        self.__vf_xy_normed__ = (
+            (__vf_xy__[0] / __vf_img_shape__[0], __vf_xy__[1] / __vf_img_shape__[1]) 
+            if __vf_xy__ 
+            else None
+        )
 
     def to_pydantic(self) -> BaseModel:
         P = self.__class__.__pydantic_model()
@@ -65,3 +63,6 @@ class EntityBase:
                 v = v.to_pydantic()
             data[k] = v
         return P(**data)
+
+    def coordinates(self, normalized: bool=False) -> Union[Tuple[float, float] | Tuple[int, int] | None]:
+        return self.__vf_xy_normed__ if normalized else self.__vf_xy__

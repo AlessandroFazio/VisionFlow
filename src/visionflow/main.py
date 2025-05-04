@@ -4,27 +4,23 @@ import PIL.Image
 import yaml
 
 from visionflow.core.entity.base import EntityBase
+from visionflow.core.entity.reflection.decorators import entity
 from visionflow.core.entity.reflection.descriptors import ClassificationLabelField, EntityRefField, OcrRegexField
 from visionflow.core.visionflow import VisionFlow, VisionFlowConfig
 
-def branch_binding(name: str) -> Callable[[Type[EntityBase]], Type[EntityBase]]:
-    def decorator(cls: Type[EntityBase]) -> Type[EntityBase]:
-        cls.__vf_meta__.branch_binding = name
-        return cls
-    return decorator
-
-
+@entity()
 class Card(EntityBase):
     value: str = ClassificationLabelField(allowed_labels=[])
 
-@branch_binding(name="player_info")
+@entity()
 class SeatState(EntityBase):
     empty: bool = OcrRegexField(pattern="", converter=...)
 
-@branch_binding(branch="player_info")
+@entity()
 class PokerPlayer(EntityBase):
     username: str = OcrRegexField(pattern)
 
+@entity()
 class TableSeat(EntityBase):
     state: SeatState = EntityRefField()
     player: PokerPlayer = EntityRefField()

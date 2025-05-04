@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Dict, List, Type, TypeVar, Union
+from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
 import uuid
 
 import numpy as np
@@ -20,6 +20,7 @@ T = TypeVar('T')
 class Exchange:
     execution_id: str
     image: np.ndarray
+    original_image_shape: Tuple[int, int]
     detections: List[DetectionResult] = field(default_factory=list)
     classifications: List[ClassificationResult] = field(default_factory=list)
     ocr_results: List[OcrResult] = field(default_factory=list)

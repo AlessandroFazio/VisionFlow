@@ -43,9 +43,11 @@ class OcrRegexProcessor(FieldProcessorBase):
         
         return [gd for gd in match_gen]
 
+
 class EntityRefProcessor(FieldProcessorBase):
     def process(self, field: FieldMeta, exchange: Exchange) -> Any:
         return None
+
 
 class ClassificationLabelProcessor(FieldProcessorBase):
     def process(self, meta: FieldMeta, exchange: Exchange) -> Any:

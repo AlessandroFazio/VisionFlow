@@ -6,7 +6,7 @@ import supervision as sv
 import numpy as np
 
 from visionflow.core.inference.base import InferenceServiceBase
-from visionflow.core.types import XyXyType
+from visionflow.core.common.types import XyXyType
 
 
 
