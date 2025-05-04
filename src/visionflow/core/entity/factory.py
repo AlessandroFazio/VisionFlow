@@ -7,18 +7,20 @@ from visionflow.core.pipeline.base import Exchange
 
 
 class EntityFactory:
-    def __init__(self) -> None:
-        self._processors: Dict[FieldType, FieldProcessorBase] = {
+    _processors: Dict[FieldType, FieldProcessorBase] = {
             FieldType.OCR_REGEX: OcrRegexProcessor(),
             FieldType.CLASSIFICATION_LABEL: ClassificationLabelProcessor(),
             FieldType.ENTITY_REF: EntityRefProcessor()
         }
+    
+    def __init__(self, entity_cls: Type[EntityBase]) -> None:
+        self._entity_cls = entity_cls
 
-    def from_exchange(self, cls: Type[EntityBase], exchange: Exchange) -> EntityBase:
-        fields = cls.__vf_meta__.fields
+    def from_exchange(self, exchange: Exchange) -> EntityBase:
+        fields = self._entity_cls.__vf_meta__.fields
         kwargs = {}
         for fname, meta in fields.items():
             processor = self._processors[meta.field_type]
             kwargs[fname] = processor.process(meta, exchange)
-        return cls(**kwargs)
+        return self._entity_cls(**kwargs)
     

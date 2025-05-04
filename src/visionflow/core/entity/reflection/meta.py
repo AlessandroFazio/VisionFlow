@@ -34,8 +34,3 @@ class FieldMeta:
 class EntityMeta:
     branch_binding: Optional[str] = None
     fields: Dict[str, FieldMeta] = field(default_factory=dict)
-
-    def iter_children(self) -> Iterator[Type["EntityBase"]]:
-        for meta in self.fields.values():
-            if meta.field_type == FieldType.ENTITY_REF:
-                yield meta.type_hint

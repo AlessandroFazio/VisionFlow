@@ -1,12 +1,16 @@
 # visionflow/core/pipeline/dsl.py
 
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Type
 
 import cv2
 
+from visionflow.core.entity.base import EntityBase
+from visionflow.core.entity.factory import EntityFactory
+from visionflow.core.entity.registry import EntityRegistry
 from visionflow.core.inference.base import InferenceServiceBase
-from visionflow.core.pipeline.base import Exchange, StepBase
+from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
+from visionflow.core.pipeline.steps.misc.build_entity import BuildEntityStep
 from visionflow.core.pipeline.steps.misc.split_by import SplitByStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
@@ -35,6 +39,7 @@ class PipelineBuilder:
         self._parent = parent
         self._steps: List[StepBase] = []
         self._split_builder: "SplitBuilder" = None
+        self._root_entity_cls: Type[EntityBase] = None
 
     def then(self, step: StepBase) -> "PipelineBuilder":
         self._steps.append(step)
@@ -85,13 +90,27 @@ class PipelineBuilder:
         )
         return self._split_builder
 
-    def apply(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
+    def process(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
         return self.then(ProcessStep(fn))
+    
+    def build_entity(self, entity_cls: Type[EntityBase]) -> "PipelineBuilder":
+        return self.then(BuildEntityStep(EntityFactory(entity_cls)))
+
+    def root_entity(self, entity_cls: Type[EntityBase]) -> "PipelineBuilder":
+        self._root_entity_cls = entity_cls
+        return self
+    
+    def _build_context(self) -> PipelineContext:
+        context = PipelineContext()
+        if self._root_entity_cls:
+            registry = EntityRegistry.from_root_cls(self._root_entity_cls)
+            context.put(EntityRegistry.pipeline_ctx_key(), registry)
+        return context
 
     def build(self) -> Pipeline:
-        pipeline = Pipeline(self.name, self._steps)
+        pipeline = Pipeline(self.name, self._steps, self._build_context())
         validation = pipeline.validate()
-        if not validation.ok:
+        if not validation.success():
             raise ValueError("")
         return pipeline
 

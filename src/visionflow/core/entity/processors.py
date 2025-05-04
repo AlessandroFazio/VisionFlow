@@ -45,7 +45,7 @@ class OcrRegexProcessor(FieldProcessorBase):
 
 class EntityRefProcessor(FieldProcessorBase):
     def process(self, field: FieldMeta, exchange: Exchange) -> Any:
-        pass
+        return None
 
 class ClassificationLabelProcessor(FieldProcessorBase):
     def process(self, meta: FieldMeta, exchange: Exchange) -> Any:

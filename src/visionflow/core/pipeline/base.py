@@ -32,6 +32,9 @@ class ValidationResult:
     step: "StepBase"
     violations: List[str] = field(default_factory=list)
 
+    def success(self) -> bool:
+        return self.ok
+
     @classmethod
     def with_error(cls, *errors: str, step: "StepBase") -> "ValidationResult":
         return cls(ok=False, step=step, violations=list(errors))

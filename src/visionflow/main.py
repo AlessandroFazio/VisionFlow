@@ -41,9 +41,10 @@ def main():
     
     config = VisionFlowConfig.model_validate(content)
     vf = VisionFlow(config)
-    
+    builder = vf.builder("pokerstars_recognizer")
+
     pipeline = (
-        vf.builder("pokerstars_recognizer")
+        builder
           .detect("poker/table_detection")
           .split_by_detections()
             
@@ -51,7 +52,6 @@ def main():
               .filter(min_conf=0.70)
               .crop_to_detection()
               .classify("poker/card_classifier")
-              .apply(lambda ex:ex)
             .end_branch()
             
             .branch("player_info")
@@ -86,6 +86,7 @@ def main():
             .end_branch()
           
           .end_split()
+          .root_entity(Card)
           .build()
       )
     

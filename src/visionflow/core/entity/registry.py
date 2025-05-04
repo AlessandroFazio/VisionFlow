@@ -1,37 +1,48 @@
-from collections import defaultdict, deque
-from dataclasses import dataclass
+from collections import defaultdict
+from threading import RLock
 from typing import Dict, List, Type
 
-from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.utils import EntityUtils
+from visionflow.collections.hierarchical_map import HierarchicalMap
+from visionflow.core.entity.base import Entity, EntityBase
+from visionflow.core.entity.resolver import EntityRefResolverVisitor
 
 
-@dataclass
 class EntityRegistry:
-    entities: Dict[str, Type[EntityBase]]
-    parenthood: Dict[str, List[Type[EntityBase]]]
+    def __init__(
+        self,
+        class_hierarchy: HierarchicalMap[str, Type[EntityBase]]
+    ) -> None:
+        self.class_hierarchy = class_hierarchy
+        self._instance_graph: Dict[str, List[EntityBase]] = defaultdict(list)
+        self._lock = RLock()
+
+    def register(self, entity: EntityBase) -> None:
+        with self._lock:
+            name = Entity.name(entity.__class__)
+            if not name in self.class_hierarchy:
+                raise ValueError("")
+            self._instance_graph[name].append(entity)
+
+    def instances(self) -> List[EntityBase]:
+        with self._lock:
+            return list(self._instance_graph.values())
+        
+    def instances_by_entity_name(self, name: str) -> List[EntityBase]:
+        with self._lock:
+            return self._instance_graph.get(name, [])
+
+    def accept(self, visitor: EntityRefResolverVisitor) -> None:
+        with self._lock:
+            visitor.visit(self)
 
     @classmethod
-    def from_root(cls, root: Type[EntityBase]) -> "EntityRegistry":
-        entities = {}
-        visited = set()
-        parenthood = defaultdict(list)
-        queue = deque([root])
-
-        if EntityUtils.detect_cycle(root, set()):
-            raise ValueError("Cycle in entity definitions")
-
-        while queue:
-            entity_cls = queue.popleft()
-            name = entity_cls.__name__
-            if name in visited:
-                continue
-            visited.add(name)
-            entities[name] = entity_cls
-            meta = entity_cls.__vf_meta__
-            for child_cls in meta.iter_children():
-                child_name = child_cls.__name__
-                parenthood[child_name].append(entity_cls)
-                queue.append(child_cls)
-
-        return cls(entities) 
+    def from_root_cls(cls, root: Type[EntityBase]) -> "EntityRegistry":
+        return cls(HierarchicalMap(
+            hierarchy=root, 
+            key_fn=Entity.name, 
+            children_fn=Entity.iter_children
+        ))
+    
+    @classmethod
+    def pipeline_ctx_key(cls) -> str:
+        return '__vf_entity_registry__'

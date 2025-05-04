@@ -1,9 +1,26 @@
-from typing import Type, get_type_hints
+from typing import Iterator, Type, get_type_hints
 
 from anthropic import BaseModel
 from pydantic import create_model
 
-from visionflow.core.entity.reflection.meta import EntityMeta
+from visionflow.core.entity.reflection.meta import EntityMeta, FieldType
+
+
+class Entity:
+    @staticmethod
+    def name(entity_cls: Type["EntityBase"]) -> str:
+        return entity_cls.__name__
+    
+    @staticmethod
+    def meta(entity_cls: Type["EntityBase"]) -> EntityMeta:
+        return entity_cls.__vf_meta__
+    
+    @staticmethod
+    def iter_children(entity_cls: Type["EntityBase"]) -> Iterator[Type["EntityBase"]]:
+        fields = entity_cls.__vf_meta__.fields
+        for meta in fields.values():
+            if meta.field_type == FieldType.ENTITY_REF:
+                yield meta.type_hint
 
 
 class EntityBase:

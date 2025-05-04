@@ -8,9 +8,10 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase, V
 
 
 class Pipeline(StepBase):
-    def __init__(self, name: str, steps: List[StepBase]) -> None:
-        super().__init__(name=name)
+    def __init__(self, name: str, steps: List[StepBase], context: PipelineContext) -> None:
         self.steps = steps
+        self.context = context
+        super().__init__(name=name)
     
     def _load_image(self, img_bytes: bytes) -> np.ndarray:
         img = np.frombuffer(img_bytes, np.uint8)
@@ -22,9 +23,9 @@ class Pipeline(StepBase):
             exchange = executor(context, dataclasses.replace(exchange))
         return exchange
 
-    def run(self, context: PipelineContext, img_bytes: bytes) -> Exchange:
+    def run(self, img_bytes: bytes) -> Exchange:
         img = self._load_image(img_bytes)
-        return self.process(context, Exchange(self._execution_id(), image=img))
+        return self.process(self.context, Exchange(self._execution_id(), image=img))
     
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         return self._dispatch(context, exchange, [step.process for step in self.steps])
