@@ -13,7 +13,7 @@ class EntityRegistry:
         class_hierarchy: HierarchicalMap[str, Type[EntityBase]]
     ) -> None:
         self.class_hierarchy = class_hierarchy
-        self._instance_graph: Dict[str, List[EntityBase]] = defaultdict(list)
+        self._instances: Dict[str, List[EntityBase]] = defaultdict(list)
         self._lock = RLock()
 
     def register(self, entity: EntityBase) -> None:
@@ -21,15 +21,15 @@ class EntityRegistry:
             name = Entity.name(entity.__class__)
             if not name in self.class_hierarchy:
                 raise ValueError("")
-            self._instance_graph[name].append(entity)
+            self._instances[name].append(entity)
 
     def instances(self) -> List[EntityBase]:
         with self._lock:
-            return list(self._instance_graph.values())
+            return list(self._instances.values())
         
     def instances_by_entity_name(self, name: str) -> List[EntityBase]:
         with self._lock:
-            return self._instance_graph.get(name, [])
+            return self._instances.get(name, [])
 
     def accept(self, visitor: EntityRefResolverVisitor) -> None:
         with self._lock:
