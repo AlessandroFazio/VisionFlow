@@ -1,7 +1,7 @@
 from collections import deque
 from typing import Callable, Iterator, Set
 
-from visionflow.core.collections.types import T, NodeBase, SupportsHash
+from visionflow.collections.types import T, NodeBase, SupportsHash
 
 
 class GraphUtils:

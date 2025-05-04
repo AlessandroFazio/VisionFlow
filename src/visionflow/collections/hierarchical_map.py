@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Callable, Dict, Generic, Iterable, Iterator, List, Optional, Tuple, TypeVar
 
-from visionflow.core.collections.types import NodeBase, SupportsHash
-from visionflow.core.collections.utils import GraphUtils
+from visionflow.collections.types import NodeBase, SupportsHash
+from visionflow.collections.utils import GraphUtils
 
 K = TypeVar("K", bound=SupportsHash)
 V = TypeVar("V")
@@ -22,7 +22,7 @@ class HierarchicalMap(Generic[K, V]):
         value_factory: Optional[Callable[[V], V]] = None
     ):
         self.key_fn = key_fn
-        self.node_factory = value_factory or (lambda x: x)
+        self.value_factory = value_factory or (lambda x: x)
         self.children_fn = children_fn
         self._key_map: Dict[K, Node[V]] = {}
         self._root = self._build_tree(hierarchy)
@@ -35,7 +35,7 @@ class HierarchicalMap(Generic[K, V]):
             if node:
                 return node 
             
-            value = self.node_factory(h)
+            value = self.value_factory(h)
             node = Node(value)
             self._key_map[key] = node
 
