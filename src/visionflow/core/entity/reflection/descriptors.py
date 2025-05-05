@@ -42,7 +42,7 @@ class FieldBase(ABC):
     def __get__(self, instance: EntityBase, owner: Type[EntityBase]) -> Any:
         return instance.__dict__.get(self.name) if instance else self
 
-class ClassificationLabelField(FieldBase):
+class ClassificationLabel(FieldBase):
     def __init__(
         self, 
         allowed_labels: List[str]=None, 
@@ -64,7 +64,7 @@ class ClassificationLabelField(FieldBase):
             priority=self.priority
         )
 
-class OcrRegexField(FieldBase):
+class OcrRegex(FieldBase):
     def __init__(
         self, 
         pattern: str,
@@ -90,7 +90,7 @@ class OcrRegexField(FieldBase):
             priority=self.priority
         )
 
-class EntityRefField(FieldBase):
+class EntityRef(FieldBase):
     def __init__(
         self,
         sort_type: Union[str | SortType | None]=None,

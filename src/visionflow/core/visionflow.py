@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from visionflow.core.inference.config import ModelConfig
 from visionflow.core.inference.factory import InferenceServiceFactory
-from visionflow.core.pipeline.builder import PipelineBuilder
+from visionflow.core.pipeline.builder.pipeline import PipelineBuilder
 
 
 class VisionFlowConfig(BaseModel):

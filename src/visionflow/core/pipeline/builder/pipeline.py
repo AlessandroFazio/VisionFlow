@@ -1,6 +1,6 @@
 # visionflow/core/pipeline/dsl.py
 
-from typing import Callable, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Type
 
 import cv2
 
@@ -29,6 +29,9 @@ from visionflow.core.pipeline.utils.multiplexers import DetectionMultiplexer, Ex
 from visionflow.core.common.coordinates.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
 from visionflow.core.common.types import XyXyType
 
+if TYPE_CHECKING:
+    from visionflow.core.pipeline.builder.groups import StepGroup
+
 
 class PipelineBuilder:
     def __init__(
@@ -42,7 +45,7 @@ class PipelineBuilder:
         self._parent = parent
         self._steps: List[StepBase] = []
         self._split_builder: "SplitBuilder" = None
-        self._root_entity_cls: Type[EntityBase] = None
+        self._using_entity = False
 
     def then(self, step: StepBase) -> "PipelineBuilder":
         self._steps.append(step)
@@ -78,69 +81,90 @@ class PipelineBuilder:
     def mask_detection(self) -> "PipelineBuilder":
         return self.then(MaskStep(DetectionCoordinatesProvider()))
     
-    def split_by(self) -> "SplitBuilder":
+    def static_mask(self, xyxy: XyXyType) -> "PipelineBuilder":
+        return self.then(MaskStep(StaticCoordinatesProvider(xyxy)))
+    
+    def _split_by(self) -> "SplitBuilder":
         self._split_builder = SplitBuilder(self)
         return self._split_builder
     
-    def end_branch(self) -> "SplitBuilder":
+    def _end_branch(self) -> "SplitBuilder":
         return self._split_builder
     
-    def split_by_detections(self) -> "SplitBuilder":
-        self._split_builder = (
-            SplitBuilder(self)
-                .multiplexer(DetectionMultiplexer())
-                .matcher(DetectionClassMatcher())
-        )
+    def end_class(self) -> "DetectionSplitBuilder":
+        return self._end_branch()
+    
+    def split_detections(self) -> "DetectionSplitBuilder":
+        self._split_builder = DetectionSplitBuilder(parent=self)
         return self._split_builder
 
     def process(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
         return self.then(ProcessStep(fn))
     
-    def build_entity(self, entity_cls: Type[EntityBase]) -> "PipelineBuilder":
-        return self.then(BuildEntityStep(EntityFactory(entity_cls)))
-
-    def root_entity(self, entity_cls: Type[EntityBase]) -> "PipelineBuilder":
-        self._root_entity_cls = entity_cls
+    def build_entity(self, *classes: Type[EntityBase]) -> "PipelineBuilder":
+        self._using_entity = True
+        if not classes:
+            raise ValueError("")
+        for cls in classes:
+            self.then(BuildEntityStep(EntityFactory(cls)))
         return self
     
-    def resolve_entity(self) -> "PipelineBuilder":
+    def _resolve_entity(self) -> "PipelineBuilder":
+        if not self._using_entity:
+            raise ValueError("")
         return self.then(ResolveEntityStep(EntityRegistryResolver.default()))
+    
+    def apply_group(self, group: "StepGroup") -> "PipelineBuilder":
+        return group.apply(self)
     
     def _build_context(self) -> PipelineContext:
         context = PipelineContext()
-        if self._root_entity_cls:
-            registry = HierarchicalEntityRegistry.from_root_class(self._root_entity_cls)
+        if self._using_entity:
+            registry = HierarchicalEntityRegistry.from_root_class()
             context.put(EntityRegistryBase.pipeline_ctx_key(), registry)
         return context
 
     def build(self) -> Pipeline:
+        if self._using_entity:
+            self._resolve_entity()
+
         pipeline = Pipeline(self.name, self._steps, self._build_context())
         validation = pipeline.validate()
         if not validation.success():
             raise ValueError("")
+        
         return pipeline
 
 
 class SplitBuilder:
-    def __init__(self, parent: PipelineBuilder) -> None:
-        self.parent = parent
-        self._matcher = None
-        self._multiplexer = None
+    def __init__(
+        self, 
+        parent: PipelineBuilder, 
+        matcher: BranchMatcherBase, 
+        multiplexer: ExchangeMultiplexerBase
+    ) -> None:
+        self._parent = parent
+        self._matcher = matcher
+        self._multiplexer = multiplexer
         self._branch_builders: Dict[str, PipelineBuilder] = {}
     
-    def matcher(self, matcher: BranchMatcherBase) -> "SplitBuilder":
-        self._matcher = matcher
-        return self
-    
-    def multiplexer(self, multiplexer: ExchangeMultiplexerBase) -> "SplitBuilder":
-        self._multiplexer = multiplexer
-        return self
-    
-    def branch(self, label: str) -> PipelineBuilder:
-        builder = PipelineBuilder(label, self.parent.services, parent=self.parent)
-        self._branch_builders[label] = builder
+    def _branch(self, name: str) -> PipelineBuilder:
+        builder = PipelineBuilder(name, self._parent.services, parent=self._parent)
+        self._branch_builders[name] = builder
         return builder
 
     def end_split(self) -> PipelineBuilder:
         branches = {name: bb.build() for name, bb in self._branch_builders.items()}
-        return self.parent.then(SplitByStep(branches))
+        return self._parent.then(SplitByStep(branches))
+    
+
+class DetectionSplitBuilder(SplitBuilder):
+    def __init__(self, parent: PipelineBuilder) -> None:
+        super().__init__(
+            parent=parent, 
+            matcher=DetectionClassMatcher(), 
+            multiplexer=DetectionMultiplexer()
+        )
+
+    def for_class(self, detection_class: str) -> "PipelineBuilder":
+        return self._branch(detection_class)
