@@ -6,7 +6,8 @@ import yaml
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.reflection.decorators import entity
 from visionflow.core.entity.reflection.descriptors import ClassificationLabel, EntityRef, OcrRegex
-from visionflow.core.pipeline.builder.groups import FilterCrop, FilterCropClassify, FilterCropOcr, FilterMaskOcr
+from visionflow.core.pipeline.builder.groups import FilterCrop, FilterCropClassify, FilterCropOcr, FilterMaskOcr, StepGroup
+from visionflow.core.pipeline.builder.pipeline import PipelineBuilder
 from visionflow.core.visionflow import VisionFlow, VisionFlowConfig
 
 @entity()
@@ -34,6 +35,52 @@ class PokerTable(EntityBase):
     is_dealer: bool = EntityRef()
 
 
+class CardRecognizer(StepGroup):
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder: 
+        return (
+            builder
+              .apply(FilterCropClassify("poker/card_classifier", min_conf=0.70))
+              .build_entity(Card)
+        )
+    
+class PlayerInfoRecognizer(StepGroup):
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
+      return (
+          builder
+            .apply(FilterCropOcr("poker/player_info_ocr", min_conf=0.70, reshape=(2,2)))
+            .build_entity(SeatState)
+      )
+    
+class PlayerInRecognizer(StepGroup):
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
+      return (
+          builder
+            .filter(min_conf=0.70)
+            .build_entity(PlayerIn)
+      )
+    
+class DealerButtonRecognizer(StepGroup):
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
+      return (
+          builder
+            .filter(min_conf=0.70)
+            .build_entity(DealerButton)
+      )
+
+class ChipsAmountRecognizer(StepGroup):
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
+      return (
+          builder
+            .apply(FilterCrop(min_conf=0.70))
+              .detect("poker/chips_detector")
+              .split_detections()
+                .for_class("chips")
+                  .apply(FilterMaskOcr("poker/chips_ocr", min_conf=0.70, reshape=(2,2)))
+                  .build_entity(ChipsAmount)
+                .end_class()
+              .end_split()
+      )
+
 
 def main():
     config_path = ""
@@ -44,50 +91,27 @@ def main():
     img_bytes = PIL.Image.open(img_path).tobytes()
     
     config = VisionFlowConfig.model_validate(content)
-    process_cards = FilterCropClassify("poker/card_classifier", min_conf=0.70)
-    process_player_info = FilterCropOcr("poker/player_info_ocr", min_conf=0.70, reshape=(2,2))
-    process_chips = FilterMaskOcr("poker/chips_ocr", min_conf=0.70, reshape=(2,2))
-    
     vf = VisionFlow(config)
 
     pipeline = (
         vf.builder("pokerstars_recognizer")
           .detect("poker/table_detection")
           .split_detections()
-            
             .for_class("card")
-              .apply_group(process_cards)
-              .build_entity(Card)
+              .apply(CardRecognizer())
             .end_class()
-            
             .for_class("player_info")
-              .apply_group(process_player_info)
-              .build_entity(PlayerInfo, SeatState)
+              .apply(PlayerInfoRecognizer())
             .end_class()
-            
             .for_class("player_in")
-              .filter(min_conf=0.70)
-              .build_entity(PlayerIn)
+              .apply(PlayerInRecognizer())
             .end_class()
-            
             .for_class("dealer_button")
-              .filter(min_conf=0.70)
-              .build_entity(DealerButton)
+              .apply(DealerButtonRecognizer())
             .end_class()
-            
             .for_class("chips_amount")
-              .apply_group(FilterCrop(min_conf=0.70))
-              .detect("poker/chips_detector")
-              .split_detections()
-                
-                .for_class("chips")
-                  .apply_group(process_chips)
-                  .build_entity(ChipsAmount)
-                .end_class()
-              
-              .end_split()
+              .apply(ChipsAmountRecognizer())
             .end_class()
-
           .end_split()
           .build_entity(PokerTable)
           .build()

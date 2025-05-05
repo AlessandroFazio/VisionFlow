@@ -114,7 +114,7 @@ class PipelineBuilder:
             raise ValueError("")
         return self.then(ResolveEntityStep(EntityRegistryResolver.default()))
     
-    def apply_group(self, group: "StepGroup") -> "PipelineBuilder":
+    def apply(self, group: "StepGroup") -> "PipelineBuilder":
         return group.apply(self)
     
     def _build_context(self) -> PipelineContext:
