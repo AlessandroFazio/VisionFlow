@@ -19,6 +19,6 @@ class VisionFlow:
     def builder(self, pipeline_name: str) -> PipelineBuilder:
         builder = PipelineBuilder(
             name=pipeline_name,
-            services={InferenceServiceFactory.create(m) for m in self.config.models}
+            services={m.name: InferenceServiceFactory.create(m) for m in self.config.models}
         )
         return builder
