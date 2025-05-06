@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Type, Union, get_type_hints
+from typing import Any, List, Optional, Type, Union
 
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.reflection.meta import ClassificationLabelConfig, EntityRefConfig, FieldMeta, FieldType, FieldTypeInfo, OcrRegexConfig
@@ -19,20 +19,9 @@ class FieldBase(ABC):
     @abstractmethod
     def _to_field_meta(self, type_info: FieldTypeInfo) -> FieldMeta:
         pass
-    
-    def __get_field_type_info(self, owner: Type[EntityBase], name: str) -> FieldTypeInfo:
-        get_raw = lambda: owner.__annotations__.get(name)
-        hints = get_type_hints(owner)
-        type_hint = hints.get(name, get_raw())
-        return FieldTypeInfo.from_type_hint(type_hint) 
-
-    def __register_field_meta(self, owner: Type[EntityBase], name: str) -> None:
-        type_info = self.__get_field_type_info(owner, name)
-        owner.__vf_meta__.fields[name] = self._to_field_meta(type_info)
 
     def __set_name__(self, owner: Type[EntityBase], name: str) -> None:
         self.name = name
-        self.__register_field_meta(owner, name)
 
     def __set__(self, instance: EntityBase, value: Any) -> None:
         if instance is None:
@@ -93,11 +82,13 @@ class OcrRegex(FieldBase):
 class EntityRef(FieldBase):
     def __init__(
         self,
+        entity_cls: Optional[Type[EntityBase]]=None,
         sort_type: Union[str | SortType | None]=None,
         sort_keys: Optional[List[str]]=None,
         converter: Optional[EntityRefConverter]=None, 
         priority: int=0
     ) -> None:
+        self.entity_cls = entity_cls
         self.sort_type = sort_type
         self.sort_keys = sort_keys
         self.converter = converter or (lambda x: x)
@@ -118,5 +109,8 @@ class EntityRef(FieldBase):
             type_info=type_info,
             converter=self.converter,
             priority=self.priority,
-            config=EntityRefConfig(sort_strategy=sort_strategy)
+            config=EntityRefConfig(
+                entity_cls=self.entity_cls,
+                sort_strategy=sort_strategy
+            )
         )

@@ -11,5 +11,5 @@ class BuildEntityStep(StepBase):
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         registry = context.get(EntityRegistryBase.pipeline_ctx_key(), EntityRegistryBase)
         entity = self.factory.from_exchange(exchange)
-        registry.register(entity)
+        registry.register_entity(entity)
         return exchange

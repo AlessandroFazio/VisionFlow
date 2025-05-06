@@ -1,4 +1,5 @@
 # visionflow/core/pipeline/steps/filter_detections.py
+import dataclasses
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
@@ -13,5 +14,4 @@ class FilterStep(StepBase):
             item for item in getattr(exchange, self.category, [])
             if item.confidence >= self.min_confidence
         ]
-        setattr(exchange, self.category, items)
-        return exchange
+        return dataclasses.replace(exchange, **{self.category: items})

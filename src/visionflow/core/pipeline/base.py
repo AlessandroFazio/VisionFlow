@@ -12,11 +12,12 @@ from prefect.tasks import task_input_hash
 from visionflow.core.inference.classification.base import ClassificationResult
 from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.inference.ocr.base import OcrResult
+from visionflow.core.parser.regex_matcher import RegexMatchResult
 
 
 T = TypeVar('T')
 
-@dataclass
+@dataclass(frozen=True)
 class Exchange:
     execution_id: str
     image: np.ndarray
@@ -24,10 +25,11 @@ class Exchange:
     detections: List[DetectionResult] = field(default_factory=list)
     classifications: List[ClassificationResult] = field(default_factory=list)
     ocr_results: List[OcrResult] = field(default_factory=list)
+    ocr_regex_matches: List[RegexMatchResult] = field(default_factory=list)
     private: Dict[str, Any] = field(default_factory=dict)
 
 
-@dataclass
+@dataclass(frozen=True)
 class ValidationResult:
     ok: bool
     step: "StepBase"

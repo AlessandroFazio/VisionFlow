@@ -6,9 +6,11 @@ import cv2
 
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.factory import EntityFactory
+from visionflow.core.entity.iterator.hierarchy import EntityHierarchyIterator
 from visionflow.core.entity.registry.base import EntityRegistryBase
-from visionflow.core.entity.registry.registries import HierarchicalEntityRegistry
+from visionflow.core.entity.registry.registries import GraphEntityRegistry
 from visionflow.core.entity.registry.visitors import EntityRegistryResolver
+from visionflow.core.entity.utils import Entity
 from visionflow.core.inference.base import InferenceServiceBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
@@ -20,14 +22,16 @@ from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
 from visionflow.core.pipeline.steps.functional.process import ProcessStep
 from visionflow.core.pipeline.pipeline import Pipeline
+from visionflow.core.pipeline.steps.inference.ocr_regex_match import OcrRegexMatchStep
 from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
 from visionflow.core.pipeline.steps.transforms.mask import MaskStep
 from visionflow.core.pipeline.steps.transforms.crop import CropStep
 from visionflow.core.pipeline.steps.transforms.resize import ResizeStep
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase, DetectionClassMatcher
-from visionflow.core.pipeline.utils.multiplexers import DetectionMultiplexer, ExchangeMultiplexerBase
-from visionflow.core.common.coordinates.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
-from visionflow.core.common.types import XyXyType
+from visionflow.core.pipeline.utils.splitters import DetectionExchangeSplitter, ExchangeSplitterBase
+from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider, TextProviderBase
+from visionflow.core.regex.base import RegexMatcherBase
+from visionflow.core.types import XyXyType
 
 if TYPE_CHECKING:
     from visionflow.core.pipeline.builder.groups import StepGroup
@@ -45,7 +49,14 @@ class PipelineBuilder:
         self._parent = parent
         self._steps: List[StepBase] = []
         self._split_builder: "SplitBuilder" = None
-        self._using_entity = False
+        self._entity_registry: "EntityRegistryBase" = (
+            self._parent._entity_registry 
+            if parent else GraphEntityRegistry()
+        )
+        self._bound_entities: set[str] = (
+            parent._bound_entities 
+            if parent else set()
+        )
 
     def then(self, step: StepBase) -> "PipelineBuilder":
         self._steps.append(step)
@@ -84,6 +95,9 @@ class PipelineBuilder:
     def static_mask(self, xyxy: XyXyType) -> "PipelineBuilder":
         return self.then(MaskStep(StaticCoordinatesProvider(xyxy)))
     
+    def ocr_regex_match(self, matcher: RegexMatcherBase, provider: TextProviderBase) -> "PipelineBuilder":
+        return self.then(OcrRegexMatchStep(matcher, provider))
+    
     def _split_by(self) -> "SplitBuilder":
         self._split_builder = SplitBuilder(self)
         return self._split_builder
@@ -98,35 +112,39 @@ class PipelineBuilder:
         self._split_builder = DetectionSplitBuilder(parent=self)
         return self._split_builder
 
-    def process(self, fn: Callable[[Exchange], Exchange]) -> "PipelineBuilder":
+    def process(self, fn: Callable[[PipelineContext, Exchange], Exchange]) -> "PipelineBuilder":
         return self.then(ProcessStep(fn))
     
     def build_entity(self, *classes: Type[EntityBase]) -> "PipelineBuilder":
-        self._using_entity = True
         if not classes:
-            raise ValueError("")
+            raise ValueError("At least one entity class is required")
+
         for cls in classes:
-            self.then(BuildEntityStep(EntityFactory(cls)))
+            self._entity_registry.register_class(cls)
+
+        for cls in classes:
+            for cls_in_h in EntityHierarchyIterator(cls):
+                name = Entity.name(cls_in_h)
+                if name in self._bound_entities:
+                    continue
+                self._bound_entities.add(name)
+                self.then(BuildEntityStep(EntityFactory(cls_in_h)))
+        
         return self
-    
-    def _resolve_entity(self) -> "PipelineBuilder":
-        if not self._using_entity:
-            raise ValueError("")
-        return self.then(ResolveEntityStep(EntityRegistryResolver.default()))
     
     def apply(self, group: "StepGroup") -> "PipelineBuilder":
         return group.apply(self)
     
     def _build_context(self) -> PipelineContext:
         context = PipelineContext()
-        if self._using_entity:
-            registry = HierarchicalEntityRegistry.from_root_class()
-            context.put(EntityRegistryBase.pipeline_ctx_key(), registry)
+        if self._entity_registry:
+            context.put(EntityRegistryBase.pipeline_ctx_key(), self._entity_registry)
+            
         return context
 
     def build(self) -> Pipeline:
-        if self._using_entity:
-            self._resolve_entity()
+        if not self._parent:
+            self.then(ResolveEntityStep(EntityRegistryResolver.default()))
 
         pipeline = Pipeline(self.name, self._steps, self._build_context())
         validation = pipeline.validate()
@@ -141,11 +159,11 @@ class SplitBuilder:
         self, 
         parent: PipelineBuilder, 
         matcher: BranchMatcherBase, 
-        multiplexer: ExchangeMultiplexerBase
+        exchange_splitter: ExchangeSplitterBase
     ) -> None:
         self._parent = parent
         self._matcher = matcher
-        self._multiplexer = multiplexer
+        self._exchange_splitter = exchange_splitter
         self._branch_builders: Dict[str, PipelineBuilder] = {}
     
     def _branch(self, name: str) -> PipelineBuilder:
@@ -163,7 +181,7 @@ class DetectionSplitBuilder(SplitBuilder):
         super().__init__(
             parent=parent, 
             matcher=DetectionClassMatcher(), 
-            multiplexer=DetectionMultiplexer()
+            exchange_splitter=DetectionExchangeSplitter()
         )
 
     def for_class(self, detection_class: str) -> "PipelineBuilder":

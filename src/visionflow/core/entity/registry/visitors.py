@@ -21,14 +21,16 @@ class ParentEntityResolver(EntityRegistryVisitorBase):
                 if not isinstance(entity, child_meta.type_info.base_type):
                     continue
 
-                value = getattr(selected_parent, fname)
+                value = getattr(selected_parent, fname, None)
+                entity_val = child_meta.converter(entity)
+                
                 if child_meta.type_info.is_list:
                     if isinstance(value, list):
-                        value.append(entity)
+                        value.append(entity_val)
                     else:
-                        value = [entity]
+                        value = [entity_val]
                 else:
-                    value = entity
+                    value = entity_val
                 setattr(selected_parent, fname, value)
                 break
 

@@ -20,7 +20,7 @@ class Pipeline(StepBase):
     
     def _dispatch(self, context: PipelineContext, exchange: Exchange, executors: List[Callable[[PipelineContext, Exchange], Exchange]]) -> Exchange:
         for executor in executors:
-            exchange = executor(context, dataclasses.replace(exchange))
+            exchange = executor(context, exchange)
         return exchange
 
     def run(self, img_bytes: bytes) -> Exchange:

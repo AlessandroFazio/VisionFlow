@@ -3,10 +3,10 @@ from typing import TYPE_CHECKING, Optional, Tuple, Type, Union, get_type_hints
 from anthropic import BaseModel
 from pydantic import create_model
 
-from visionflow.core.common.types import XyXyType
+from visionflow.core.types import XyXyType
 
 if TYPE_CHECKING:
-    from visionflow.core.entity.reflection.meta import EntityMeta, EntityType
+    from visionflow.core.entity.reflection.meta import EntityMeta
 
 
 class EntityBase:

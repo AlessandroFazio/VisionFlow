@@ -5,7 +5,9 @@ from typing import Optional, Tuple, Type
 
 import cv2
 
-from visionflow.core.common.types import XyXyType
+from visionflow.core.pipeline.utils.providers import OcrTextProvider
+from visionflow.core.regex.base import RegexMatcherBase
+from visionflow.core.types import XyXyType
 from visionflow.core.pipeline.builder.pipeline import PipelineBuilder
 
 
@@ -128,4 +130,18 @@ class FilterMaskOcr(FilterTransformOcr):
             interpolation=interpolation,
             binarize=binarize,
             normalize_binary=normalize_binary
+        )
+        
+        
+class OcrRegexMatcher(StepGroup):
+    def __init__(self, ocr_ref: str, matcher: RegexMatcherBase) -> None:
+        super().__init__()
+        self.ocr_ref = ocr_ref
+        self.matcher = matcher
+        
+    def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
+        return (
+            builder
+                .ocr(self.ocr_ref)
+                .ocr_regex_match(self.matcher, OcrTextProvider())
         )

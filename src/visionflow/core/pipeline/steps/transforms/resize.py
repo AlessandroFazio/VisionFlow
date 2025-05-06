@@ -1,3 +1,4 @@
+import dataclasses
 from typing import Tuple
 import cv2
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
@@ -10,7 +11,7 @@ class ResizeStep(StepBase):
         super().__init__(name="resize")
     
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
-        exchange.image = cv2.resize(
+        img = cv2.resize(
             exchange.image, (0,0), fx=self.fx, fy=self.fy, interpolation=self.interpolation
         )
-        return exchange
+        return dataclasses.replace(exchange, image=img)

@@ -18,6 +18,8 @@ supervision = "^0.25.1"
 numpy = "^2.2.5"
 pytesseract = "^0.3.13"
 pandas = "^2.2.3"
+networkx = "^3.4.2"
+babel = "^2.17.0"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

@@ -1,5 +1,6 @@
 # visionflow/core/pipeline/steps/classify.py
 
+import dataclasses
 from visionflow.core.inference.classification.base import ClassificationServiceBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
@@ -10,5 +11,5 @@ class ClassifyStep(StepBase):
         self.service = service
 
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
-        exchange.classifications = self.service.classify(exchange.image)
-        return exchange
+        results = self.service.classify(exchange.image)
+        return dataclasses.replace(exchange, classifications=results)

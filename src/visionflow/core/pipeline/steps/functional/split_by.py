@@ -1,20 +1,21 @@
+import dataclasses
 from typing import Dict, Callable
 
 from prefect import task
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase
-from visionflow.core.pipeline.utils.multiplexers import ExchangeMultiplexerBase
+from visionflow.core.pipeline.utils.splitters import ExchangeSplitterBase
 
 
 class SplitByStep(StepBase):
     def __init__(
         self,
         branches: Dict[str, StepBase],
-        multiplexer: ExchangeMultiplexerBase,
+        exchange_splitter: ExchangeSplitterBase,
         matcher: BranchMatcherBase
     ) -> None:
         self.branches = branches
-        self.multiplexer = multiplexer
+        self.exchange_splitter = exchange_splitter
         self.matcher = matcher
         self.branch_keys = list(self.branches.keys())
         super().__init__(name="split_by")
@@ -25,13 +26,11 @@ class SplitByStep(StepBase):
         exchange: Exchange,
         executors: Dict[str, Callable[[PipelineContext, Exchange], Exchange]]
     ) -> Exchange:
-        for ex in self.multiplexer.multiplex(exchange):
+        for ex in self.exchange_splitter.split(exchange):
             key, branch = self.matcher.match(ex, self.branch_keys)
             if not key:
                 continue
-
-            exec_id = branch._execution_id()
-            exchange.execution_id = exec_id
+            ex = dataclasses.replace(ex, execution_id=branch._execution_id())
             executor = executors[key]
             exchange = executor(context, ex)
         

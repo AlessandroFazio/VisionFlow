@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional, Type, Union, get_args, get_origin
 
-from visionflow.core.common.coordinates.providers import CoordinatesStrategyBase
+from visionflow.core.entity.base import EntityBase
+from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
 from visionflow.core.entity.parent_selector.base import ParentSelectorBase
 from visionflow.core.entity.reflection.types import ClassificationLabelConverter, EntityRefConverter, OcrRegexConverter
 from visionflow.core.entity.sort.base import EntitySortStrategy
@@ -69,6 +70,7 @@ class ClassificationLabelConfig:
 
 @dataclass
 class EntityRefConfig:
+    entity_cls: Type[EntityBase]
     sort_strategy: Optional[EntitySortStrategy] = None
 
 
@@ -95,7 +97,7 @@ class EntityType(Enum):
 @dataclass
 class EntitySource:
     type: EntityType
-    provider: Optional[CoordinatesStrategyBase] = None
+    provider: Optional[CoordinatesProviderBase] = None
 
 
 @dataclass
