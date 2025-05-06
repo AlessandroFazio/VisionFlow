@@ -1,6 +1,5 @@
 from typing import List
 from collections.abc import Iterable
-from visionflow.core.entity.reflection.meta import FieldType
 from visionflow.core.entity.registry.base import EntityRegistryBase, EntityRegistryVisitorBase
 from visionflow.core.entity.utils import Entity
 

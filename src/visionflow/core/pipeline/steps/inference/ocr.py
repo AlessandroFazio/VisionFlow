@@ -7,7 +7,7 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 class OcrStep(StepBase):
     def __init__(self, service: OcrServiceBase) -> None:
-        super().__init__(name="ocr")
+        super().__init__()
         self.service = service
 
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:

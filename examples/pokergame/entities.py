@@ -1,6 +1,6 @@
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.reflection.decorators import entity
-from visionflow.core.entity.reflection.descriptors import ClassificationLabel, EntityRef, OcrRegex
+from visionflow.core.entity.reflection.descriptors.fields import ClassificationLabel, EntityRef, OcrRegex
 
 from .converters import Converters
 

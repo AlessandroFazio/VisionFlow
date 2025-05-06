@@ -6,9 +6,9 @@ from visionflow.core.pipeline.base import Exchange
 
 
 class ExchangeSplitterBase(ABC):
-        @abstractmethod
-        def split(self, exchange: Exchange) -> List[Exchange]:
-            pass
+    @abstractmethod
+    def split(self, exchange: Exchange) -> List[Exchange]:
+        pass
 
 class DetectionExchangeSplitter(ExchangeSplitterBase):
     def split(self, exchange: Exchange) -> List[Exchange]:

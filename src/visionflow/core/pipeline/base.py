@@ -2,7 +2,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Dict, List, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 import uuid
 
 import numpy as np
@@ -12,7 +12,7 @@ from prefect.tasks import task_input_hash
 from visionflow.core.inference.classification.base import ClassificationResult
 from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.inference.ocr.base import OcrResult
-from visionflow.core.parser.regex_matcher import RegexMatchResult
+from visionflow.core.regex.matchers import RegexMatchResult
 
 
 T = TypeVar('T')
@@ -62,8 +62,8 @@ class PipelineContext:
 
 
 class StepBase(ABC):
-    def __init__(self, name: str, cache_mins: int=-1) -> None:
-        self.name = name
+    def __init__(self, name: Optional[str]=None, cache_mins: int=-1) -> None:
+        self.name = name or self.__class__.__name__
         self.cache_mins = cache_mins
 
     @abstractmethod

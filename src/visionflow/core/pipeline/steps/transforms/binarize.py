@@ -7,7 +7,7 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 class BinarizeStep(StepBase):
     def __init__(self, normalize: bool) -> None:
-        super().__init__(name="binarize")
+        super().__init__()
         self.normalize = normalize
     
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange: 

@@ -108,7 +108,7 @@ class PipelineBuilder:
     def end_class(self) -> "DetectionSplitBuilder":
         return self._end_branch()
     
-    def split_detections(self) -> "DetectionSplitBuilder":
+    def split_by_detections(self) -> "DetectionSplitBuilder":
         self._split_builder = DetectionSplitBuilder(parent=self)
         return self._split_builder
 

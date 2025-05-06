@@ -6,7 +6,7 @@ from pydantic import create_model
 from visionflow.core.types import XyXyType
 
 if TYPE_CHECKING:
-    from visionflow.core.entity.reflection.meta import EntityMeta
+    from visionflow.core.entity.reflection.meta.entity import EntityMeta
 
 
 class EntityBase:

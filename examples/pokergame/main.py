@@ -22,7 +22,7 @@ def main():
     pipeline = (
         vf.builder("pokerstars_recognizer")
           .detect("poker/table_detection")
-          .split_detections()
+          .split_by_detections()
             
             .for_class("card")
               .apply(CardRecognizer())
@@ -43,8 +43,8 @@ def main():
             .for_class("chips_amount")
               .apply(ChipsAmountRecognizer())
             .end_class()
-          .end_split()
-          
+            
+          .end_split()        
           .build_entity(PokerTable)
           .build()
       )

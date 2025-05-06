@@ -1,8 +1,9 @@
 from typing import Dict, Type
 
 from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.reflection.processors import ClassificationLabelProcessor, EntityRefProcessor, FieldProcessorBase, OcrRegexProcessor
-from visionflow.core.entity.reflection.meta import EntityType, FieldType
+from visionflow.core.entity.reflection.descriptors.processors import ClassificationLabelProcessor, EntityRefProcessor, FieldProcessorBase, OcrRegexProcessor
+from visionflow.core.entity.reflection.meta.entity import EntityType
+from visionflow.core.entity.reflection.meta.field import FieldType
 from visionflow.core.entity.utils import Entity
 from visionflow.core.pipeline.base import Exchange
 

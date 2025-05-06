@@ -5,7 +5,7 @@ from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
 
 class MaskStep(StepBase):
     def __init__(self, provider: CoordinatesProviderBase) -> None:
-        super().__init__(name="mask")
+        super().__init__()
         self.provider = provider
 
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:

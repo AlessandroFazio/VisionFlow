@@ -6,7 +6,7 @@ from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
 
 class CropStep(StepBase):
     def __init__(self, provider: CoordinatesProviderBase) -> None:
-        super().__init__(name="crop")
+        super().__init__()
         self.provider = provider
 
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:

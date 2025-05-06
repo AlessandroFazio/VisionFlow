@@ -48,7 +48,7 @@ class ChipsAmountRecognizer(StepGroup):
           builder
             .apply(FilterCrop(min_conf=0.70))
               .detect("poker/chips_detector")
-              .split_detections()
+              .split_by_detections()
                 
                 .for_class("chips")
                   .apply(FilterMask(min_conf=0.70))

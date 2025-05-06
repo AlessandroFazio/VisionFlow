@@ -1,6 +1,6 @@
 from typing import Dict, Iterator, Tuple, Type
 from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.reflection.meta import EntityMeta, FieldMeta, FieldType
+from visionflow.core.entity.reflection.meta.entity import EntityMeta, FieldMeta, FieldType
 
 
 class Entity:

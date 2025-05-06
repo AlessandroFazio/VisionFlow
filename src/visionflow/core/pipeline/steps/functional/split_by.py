@@ -14,11 +14,11 @@ class SplitByStep(StepBase):
         exchange_splitter: ExchangeSplitterBase,
         matcher: BranchMatcherBase
     ) -> None:
+        super().__init__()
         self.branches = branches
         self.exchange_splitter = exchange_splitter
         self.matcher = matcher
         self.branch_keys = list(self.branches.keys())
-        super().__init__(name="split_by")
 
     def _dispatch(
         self,

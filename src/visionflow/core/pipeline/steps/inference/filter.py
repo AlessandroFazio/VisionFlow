@@ -5,7 +5,7 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 class FilterStep(StepBase):
     def __init__(self, min_confidence: float, category: str) -> None:
-        super().__init__(name="filter")
+        super().__init__()
         self.min_confidence = min_confidence
         self.category = category
 

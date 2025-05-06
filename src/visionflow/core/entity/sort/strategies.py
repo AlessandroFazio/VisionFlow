@@ -3,6 +3,7 @@ from typing import List, Tuple
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.sort.base import EntitySortStrategy, KeyFunctions
 
+
 def _points_for_entities(entities: List[EntityBase]) -> List[Tuple[float, float]]:
     points = (e.coordinates(normalized=True) for e in entities)
     points = [p for p in points if p is not None]

@@ -7,7 +7,7 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 class ClassifyStep(StepBase):
     def __init__(self, service: ClassificationServiceBase) -> None:
-        super().__init__(name="classify")
+        super().__init__()
         self.service = service
 
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
