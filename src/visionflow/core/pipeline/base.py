@@ -9,6 +9,7 @@ import numpy as np
 from prefect import Flow, Task, task
 from prefect.tasks import task_input_hash
 
+from visionflow.core.entity.registry.base import EntityRegistryBase
 from visionflow.core.inference.classification.base import ClassificationResult
 from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.inference.ocr.base import OcrResult
@@ -22,6 +23,7 @@ class Exchange:
     execution_id: str
     image: np.ndarray
     original_image_shape: Tuple[int, int]
+    entity_registry: EntityRegistryBase
     detections: List[DetectionResult] = field(default_factory=list)
     classifications: List[ClassificationResult] = field(default_factory=list)
     ocr_results: List[OcrResult] = field(default_factory=list)
@@ -69,7 +71,7 @@ class StepBase(ABC):
     @abstractmethod
     def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
         pass
-    
+
     def _execution_id(self) -> str:
         return f"{self.name}-{str(uuid.uuid4())}"
 
@@ -89,3 +91,6 @@ class StepBase(ABC):
         def step_task(context: PipelineContext, exchange: Exchange) -> Exchange:
             return self.process(context, exchange)
         return step_task
+    
+    def explain(self, depth: int = 0) -> str:
+        return f"{'  ' * depth}- {self.name}"

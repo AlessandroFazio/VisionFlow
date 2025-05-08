@@ -1,8 +1,8 @@
 from typing import Type, TypeVar, Union
 
-
 T = TypeVar('T')
 U = TypeVar('U')
+
 
 class ClassFactory:
     @staticmethod

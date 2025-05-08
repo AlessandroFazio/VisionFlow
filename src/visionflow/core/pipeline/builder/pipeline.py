@@ -11,7 +11,6 @@ from visionflow.core.entity.registry.base import EntityRegistryBase
 from visionflow.core.entity.registry.registries import GraphEntityRegistry
 from visionflow.core.entity.registry.visitors import EntityRegistryResolver
 from visionflow.core.entity.utils import Entity
-from visionflow.core.inference.base import InferenceModelBase
 from visionflow.core.inference.classification.base import ClassificationModelBase
 from visionflow.core.inference.detection.base import DetectionModelBase
 from visionflow.core.inference.ocr.base import OcrModelBase
@@ -19,11 +18,11 @@ from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
 from visionflow.core.pipeline.steps.entity.build_entity import BuildEntityStep
 from visionflow.core.pipeline.steps.entity.resolve_entity import ResolveEntityStep
-from visionflow.core.pipeline.steps.functional.split_by import SplitByStep
+from visionflow.core.pipeline.steps.utility.split_by import SplitByStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
-from visionflow.core.pipeline.steps.functional.process import ProcessStep
+from visionflow.core.pipeline.steps.utility.process import ProcessStep
 from visionflow.core.pipeline.pipeline import Pipeline
 from visionflow.core.pipeline.steps.inference.ocr_regex_match import OcrRegexMatchStep
 from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
@@ -135,9 +134,7 @@ class PipelineBuilder:
     
     def _build_context(self) -> PipelineContext:
         context = PipelineContext()
-        if self._entity_registry:
-            context.put(EntityRegistryBase.pipeline_ctx_key(), self._entity_registry)
-            
+        context.put(EntityRegistryBase.pipeline_ctx_key(), self._entity_registry)    
         return context
 
     def build(self) -> Pipeline:

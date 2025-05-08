@@ -1,9 +1,9 @@
-import dataclasses
 from typing import Callable, List, Union
 
 import cv2
 import numpy as np
 from prefect import Flow, Task, flow
+from visionflow.core.entity.registry.base import EntityRegistryBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase, ValidationResult
 
 
@@ -28,8 +28,9 @@ class Pipeline(StepBase):
         img_h, img_w = img.shape[:2]
         exchange = Exchange(
             execution_id=self._execution_id(), 
-            image=img, 
-            original_image_shape=(img_w, img_h)
+            image=img,
+            original_image_shape=(img_w, img_h),
+            entity_registry=self.context.get(EntityRegistryBase.pipeline_ctx_key(), EntityRegistryBase)
         )
         return self.process(self.context, exchange)
     
@@ -49,3 +50,10 @@ class Pipeline(StepBase):
         validations = (step.validate() for step in self.steps)
         failures = [v for v in validations if not v.ok]
         return ValidationResult(ok=bool(len(failures)), step=self)
+    
+    def explain(self, depth: int = 0) -> str:
+        lines = [f"Pipeline: {self.name}"]
+        for step in self.steps:
+            lines.append(step.explain(depth + 1))
+        return "\n".join(lines)
+

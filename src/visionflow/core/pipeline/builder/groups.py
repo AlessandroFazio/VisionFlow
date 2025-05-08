@@ -5,6 +5,8 @@ from typing import Optional, Tuple, Type
 
 import cv2
 
+from visionflow.core.inference.classification.base import ClassificationModelBase
+from visionflow.core.inference.ocr.base import OcrModelBase
 from visionflow.core.pipeline.utils.providers import OcrTextProvider
 from visionflow.core.regex_matcher.base import RegexMatcherBase
 from visionflow.core.types import XyXyType
@@ -51,19 +53,18 @@ class FilterMask(StepGroup):
 
 
 class FilterCropClassify(FilterCrop):
-    def __init__(self, classifier_ref: str, min_conf: float, xyxy: Optional[XyXyType]=None) -> None:
+    def __init__(self, classifier: ClassificationModelBase, min_conf: float, xyxy: Optional[XyXyType]=None) -> None:
         super().__init__(min_conf=min_conf, xyxy=xyxy)
-        self._classifier_ref = classifier_ref
+        self.classifier = classifier
 
     def apply(self, builder: "PipelineBuilder") -> "PipelineBuilder":
-        return super().apply(builder).classify(self._classifier_ref)
+        return super().apply(builder).classify(self.classifier)
 
 
-class FilterTransformOcr(StepGroup):
+class FilterTransform(StepGroup):
     def __init__(
         self,
         base_cls: Type[StepGroup],
-        ocr_ref: str,
         min_conf: float,
         xyxy: Optional[XyXyType] = None,
         reshape: Optional[Tuple[int, int]] = None,
@@ -72,7 +73,6 @@ class FilterTransformOcr(StepGroup):
         normalize_binary: bool = False,
     ) -> None:
         self._base = base_cls(min_conf=min_conf, xyxy=xyxy)
-        self._ocr_ref = ocr_ref
         self._reshape = reshape
         self._interpolation = interpolation
         self._binarize = binarize
@@ -84,64 +84,18 @@ class FilterTransformOcr(StepGroup):
             builder = builder.resize(self._reshape, self._interpolation)
         if self._binarize:
             builder = builder.binarize(self._normalize_binary)
-        return builder.ocr(self._ocr_ref)
+        return builder
 
-
-class FilterCropOcr(FilterTransformOcr):
-    def __init__(
-        self,
-        ocr_ref: str,
-        min_conf: float,
-        xyxy: Optional[XyXyType] = None,
-        reshape: Optional[Tuple[int, int]] = None,
-        interpolation: int = cv2.INTER_CUBIC,
-        binarize: bool = True,
-        normalize_binary: bool = False,
-    ) -> None:
-        super().__init__(
-            base_cls=FilterCrop,
-            ocr_ref=ocr_ref,
-            min_conf=min_conf,
-            xyxy=xyxy,
-            reshape=reshape,
-            interpolation=interpolation,
-            binarize=binarize,
-            normalize_binary=normalize_binary
-        )
-
-
-class FilterMaskOcr(FilterTransformOcr):
-    def __init__(
-        self,
-        ocr_ref: str,
-        min_conf: float,
-        xyxy: Optional[XyXyType] = None,
-        reshape: Optional[Tuple[int, int]] = None,
-        interpolation: int = cv2.INTER_CUBIC,
-        binarize: bool = True,
-        normalize_binary: bool = False,
-    ) -> None:
-        super().__init__(
-            base_cls=FilterMask,
-            ocr_ref=ocr_ref,
-            min_conf=min_conf,
-            xyxy=xyxy,
-            reshape=reshape,
-            interpolation=interpolation,
-            binarize=binarize,
-            normalize_binary=normalize_binary
-        )
-        
         
 class OcrRegexMatcher(StepGroup):
-    def __init__(self, ocr_ref: str, matcher: RegexMatcherBase) -> None:
+    def __init__(self, ocr_model: OcrModelBase, matcher: RegexMatcherBase) -> None:
         super().__init__()
-        self.ocr_ref = ocr_ref
+        self.ocr_model = ocr_model
         self.matcher = matcher
         
     def apply(self, builder: PipelineBuilder) -> PipelineBuilder:
         return (
             builder
-                .ocr(self.ocr_ref)
+                .ocr(self.ocr_model)
                 .ocr_regex_match(self.matcher, OcrTextProvider())
         )

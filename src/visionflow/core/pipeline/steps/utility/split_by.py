@@ -48,3 +48,10 @@ class SplitByStep(StepBase):
             return self._dispatch(context, exchange, prefect_routes)
 
         return step_task
+    
+    def explain(self, depth: int = 0) -> str:
+        lines = [f"{'  ' * depth}- {self.name} (SplitBy)"]
+        for branch_name, branch in self.branches.items():
+            lines.append(f"{'  ' * (depth + 1)}[branch: {branch_name}]")
+            lines.append(branch.explain(depth + 2))
+        return "\n".join(lines)
