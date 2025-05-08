@@ -11,7 +11,10 @@ from visionflow.core.entity.registry.base import EntityRegistryBase
 from visionflow.core.entity.registry.registries import GraphEntityRegistry
 from visionflow.core.entity.registry.visitors import EntityRegistryResolver
 from visionflow.core.entity.utils import Entity
-from visionflow.core.inference.base import InferenceServiceBase
+from visionflow.core.inference.base import InferenceModelBase
+from visionflow.core.inference.classification.base import ClassificationModelBase
+from visionflow.core.inference.detection.base import DetectionModelBase
+from visionflow.core.inference.ocr.base import OcrModelBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
 from visionflow.core.pipeline.steps.entity.build_entity import BuildEntityStep
@@ -30,7 +33,7 @@ from visionflow.core.pipeline.steps.transforms.resize import ResizeStep
 from visionflow.core.pipeline.utils.matchers import BranchMatcherBase, DetectionClassMatcher
 from visionflow.core.pipeline.utils.splitters import DetectionExchangeSplitter, ExchangeSplitterBase
 from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider, TextProviderBase
-from visionflow.core.regex.base import RegexMatcherBase
+from visionflow.core.regex_matcher.base import RegexMatcherBase
 from visionflow.core.types import XyXyType
 
 if TYPE_CHECKING:
@@ -41,11 +44,9 @@ class PipelineBuilder:
     def __init__(
         self,
         name: str,
-        services: Dict[str, InferenceServiceBase],
         parent: Optional["PipelineBuilder"] = None
     ):
         self.name = name
-        self.services = services
         self._parent = parent
         self._steps: List[StepBase] = []
         self._split_builder: "SplitBuilder" = None
@@ -68,19 +69,16 @@ class PipelineBuilder:
     def resize(self, reshape: Tuple[int, int], interpolation: int=cv2.INTER_CUBIC) -> "PipelineBuilder":
         return self.then(ResizeStep(reshape, interpolation))
 
-    def detect(self, model_ref: str) -> "PipelineBuilder":
-        svc = self.services[model_ref]
-        return self.then(DetectStep(svc))
+    def detect(self, model: DetectionModelBase) -> "PipelineBuilder":
+        return self.then(DetectStep(model))
     
-    def ocr(self, model_ref: str, ) -> "PipelineBuilder":
-        svc = self.services[model_ref]
-        return self.then(OcrStep(svc))
+    def ocr(self, model: OcrModelBase) -> "PipelineBuilder":
+        return self.then(OcrStep(model))
 
-    def classify(self, model_ref: str, ) -> "PipelineBuilder":
-        svc = self.services[model_ref]
-        return self.then(ClassifyStep(svc))
+    def classify(self, model: ClassificationModelBase) -> "PipelineBuilder":
+        return self.then(ClassifyStep(model))
     
-    def filter(self, min_conf: float, ) -> "PipelineBuilder":
+    def filter(self, min_conf: float) -> "PipelineBuilder":
         return self.then(FilterStep(min_conf))
     
     def static_crop(self, xyxy: XyXyType) -> "PipelineBuilder":
@@ -167,7 +165,7 @@ class SplitBuilder:
         self._branch_builders: Dict[str, PipelineBuilder] = {}
     
     def _branch(self, name: str) -> PipelineBuilder:
-        builder = PipelineBuilder(name, self._parent.services, parent=self._parent)
+        builder = PipelineBuilder(name, parent=self._parent)
         self._branch_builders[name] = builder
         return builder
 

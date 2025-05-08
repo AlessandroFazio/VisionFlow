@@ -2,8 +2,9 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum
 import re
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Set, Tuple
 
 
 @dataclass(order=True)
@@ -34,13 +35,22 @@ class RegexMatchResult:
     rule_id: str
     text: str
     matches: Dict[str, str]
-    lineno: Optional[int] = None
 
 
 class RegexMatcherBase(ABC):
-    def __init__(self, rules: List[RegexMatcherRule]):
-        self.rules = sorted(rules, reverse=True)
+    def __init__(
+        self, 
+        rules: List[RegexMatcherRule], 
+        mutual_exclusion: Set[Tuple[str, str]]
+    ) -> None:
+        self.rules = rules
+        self.mutual_exclusion = mutual_exclusion
 
     @abstractmethod
     def match(self, text: str) -> List[RegexMatchResult]:
         pass
+
+
+class RegexMatcherMode(Enum):
+    LINE_CHUNKS = 0
+    FULL_TEXT = 1

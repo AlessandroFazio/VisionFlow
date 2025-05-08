@@ -1,10 +1,10 @@
 import numpy as np
 
-from visionflow.core.inference.classification.base import ClassificationResult, ClassificationServiceBase
-from visionflow.core.inference.mixins.roboflow import RoboflowInferenceMixin
+from visionflow.core.inference.classification.base import ClassificationResult, ClassificationModelBase
+from visionflow.core.inference.mixins.roboflow import RoboflowModelMixin
 
 
-class RoboflowClassificationService(RoboflowInferenceMixin, ClassificationServiceBase):
+class RoboflowClassificationModel(RoboflowModelMixin, ClassificationModelBase):
 
     def classify(self, img: np.ndarray) -> ClassificationResult:
         result = self._model.infer(img)[0]

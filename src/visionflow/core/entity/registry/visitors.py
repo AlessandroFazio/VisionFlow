@@ -1,5 +1,5 @@
 from typing import List
-from collections.abc import Iterable
+from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.registry.base import EntityRegistryBase, EntityRegistryVisitorBase
 from visionflow.core.entity.utils import Entity
 
@@ -12,7 +12,15 @@ class ParentEntityResolver(EntityRegistryVisitorBase):
                 continue
             
             candidates = registry.parent_candidates(entity)
-            selected_parent = meta.parent_selector.select(entity, candidates)
+            if not candidates:
+                continue
+            
+            selected_parent = None
+            if len(candidates) == 1:
+                selected_parent = candidates[0]
+            else:
+                selected_parent = meta.parent_selector.select(entity, candidates)
+            
             if not selected_parent:
                 continue
 
@@ -21,33 +29,45 @@ class ParentEntityResolver(EntityRegistryVisitorBase):
                     continue
 
                 value = getattr(selected_parent, fname, None)
-                entity_val = child_meta.converter(entity)
-                
                 if child_meta.type_info.is_list:
                     if isinstance(value, list):
-                        value.append(entity_val)
+                        value.append(entity)
                     else:
-                        value = [entity_val]
+                        value = [entity]
                 else:
-                    value = entity_val
+                    value = entity
                 setattr(selected_parent, fname, value)
                 break
+            
+
+class EntityRefConversionResolver(EntityRegistryVisitorBase):
+    def visit(self, registry: EntityRegistryBase) -> None:
+        for entity in registry.entities():
+            for fname, child_meta in Entity.iter_children(entity.__class__):
+                value = getattr(entity, fname, None)
+                setattr(entity, fname, child_meta.converter.convert(value))
 
 
 class SortedEntityResolver(EntityRegistryVisitorBase):
     def visit(self, registry: EntityRegistryBase) -> None:
+        
+        def get_sorted_entity(entities: List[EntityBase], i: int) -> EntityBase:
+            e = entities[i]
+            e.__vf_sort_order__ = i
+            return e
+
         for entity in registry.entities():          
             for fname, meta in Entity.iter_children(entity.__class__):
                 if meta.config.sort_strategy is None:
                     continue
                 
                 child_entities = getattr(entity, fname, None)
-                if not isinstance(child_entities, Iterable) or len(child_entities) < 2:
+                if not isinstance(child_entities, List) or len(child_entities) < 2:
                     continue
 
                 sorted = meta.config.sort_strategy.argsort(child_entities)
                 if sorted:
-                    setattr(entity, fname, [child_entities[i] for i in sorted])
+                    setattr(entity, fname, [get_sorted_entity(child_entities, i) for i in sorted])
 
 
 class EntityRegistryResolver(EntityRegistryVisitorBase):
@@ -63,6 +83,7 @@ class EntityRegistryResolver(EntityRegistryVisitorBase):
         return cls(
             visitors=[
                 ParentEntityResolver(),
-                SortedEntityResolver()
+                SortedEntityResolver(),
+                EntityRefConversionResolver()
             ]
         )

@@ -52,6 +52,7 @@ class EntityBase:
             if __vf_xy__ 
             else None
         )
+        self.__vf_sort_order__ = None
 
     def to_pydantic(self) -> BaseModel:
         P = self.__class__.__pydantic_model()
@@ -66,3 +67,6 @@ class EntityBase:
 
     def coordinates(self, normalized: bool=False) -> Union[Tuple[float, float] | Tuple[int, int] | None]:
         return self.__vf_xy_normed__ if normalized else self.__vf_xy__
+    
+    def sort_order(self) -> Optional[int]:
+        return self.__vf_sort_order__

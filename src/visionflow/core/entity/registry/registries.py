@@ -55,7 +55,7 @@ class GraphEntityRegistry(EntityRegistryBase):
         with self._lock:
             return self._entities.get(Entity.name(entity_cls), [])
         
-    def parent_candidates(self, entity: EntityBase) -> Iterable[EntityBase]:
+    def parent_candidates(self, entity: EntityBase) -> List[EntityBase]:
         with self._lock:
             return [
                 self.entities_for_class(c)

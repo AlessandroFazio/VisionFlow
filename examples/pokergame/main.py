@@ -1,27 +1,20 @@
 import PIL
 import PIL.Image
-import yaml
 
-from visionflow.core.visionflow import VisionFlow, VisionFlowConfig
+from examples.pokergame.models import Models
+from visionflow.core.visionflow import VisionFlow
 
 from .entities import PokerTable
 from .recognizers import CardRecognizer, ChipsAmountRecognizer, DealerButtonRecognizer, PlayerInRecognizer, SeatInfoRecognizer
 
 
-def main():
-    config_path = ""
-    with open(config_path) as f:
-        content = yaml.safe_load(f)
-    
+def main():    
     img_path = ""
     img_bytes = PIL.Image.open(img_path).tobytes()
-    
-    config = VisionFlowConfig.model_validate(content)
-    vf = VisionFlow(config)
 
     pipeline = (
-        vf.builder("pokerstars_recognizer")
-          .detect("poker/table_detection")
+        VisionFlow.pipeline("pokerstars_recognizer")
+          .detect(Models.table_detection())
           .split_by_detections()
             
             .for_class("card")

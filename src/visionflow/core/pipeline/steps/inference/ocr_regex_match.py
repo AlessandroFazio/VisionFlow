@@ -1,7 +1,7 @@
 import dataclasses
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 from visionflow.core.pipeline.utils.providers import TextProviderBase
-from visionflow.core.regex.base import RegexMatcherBase
+from visionflow.core.regex_matcher.base import RegexMatcherBase
 
 
 class OcrRegexMatchStep(StepBase):

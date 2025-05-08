@@ -5,10 +5,8 @@ from typing import List
 import supervision as sv
 import numpy as np
 
-from visionflow.core.inference.base import InferenceServiceBase
+from visionflow.core.inference.base import InferenceModelBase
 from visionflow.core.types import XyXyType
-
-
 
 
 @dataclass
@@ -28,7 +26,7 @@ class DetectionResult:
         ]
 
 
-class DetectionServiceBase(InferenceServiceBase):
+class DetectionModelBase(InferenceModelBase):
     @abstractmethod
     def detect(self, image: np.ndarray) -> List[DetectionResult]:
         pass

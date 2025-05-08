@@ -4,7 +4,7 @@ from inference.core.models.base import Model
 get_model = getattr(inference, "get_model")
 
 
-class RoboflowInferenceMixin:
+class RoboflowModelMixin:
     _API_KEY_ENV = "ROBOFLOW_API_KEY"
 
     def __init__(self, model_id: str) -> None:

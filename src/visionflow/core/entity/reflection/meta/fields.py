@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, List, Optional, Type, Union, get_args, get_origin
 
 from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.reflection.types import ClassificationLabelConverter, EntityRefConverter, OcrRegexConverter
+from visionflow.core.entity.reflection.converter.base import ConverterBases
 from visionflow.core.entity.sort.base import EntitySortStrategy
 
 
@@ -79,6 +79,5 @@ class EntityRefConfig:
 class FieldMeta:
     field_type: FieldType
     type_info: FieldTypeInfo
-    priority: int
-    converter: Union[OcrRegexConverter | ClassificationLabelConverter | EntityRefConverter]
+    converter: ConverterBases
     config: Union[ClassificationLabelConfig | OcrRegexConfig | EntityRefConfig | None] = None

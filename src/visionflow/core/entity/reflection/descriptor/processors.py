@@ -1,5 +1,5 @@
 from typing import Any
-from visionflow.core.entity.reflection.descriptors.base import FieldProcessorBase
+from visionflow.core.entity.reflection.descriptor.base import FieldProcessorBase
 from visionflow.core.entity.reflection.meta.fields import FieldMeta
 from visionflow.core.pipeline.base import Exchange
 
@@ -13,7 +13,9 @@ class OcrRegexProcessor(FieldProcessorBase):
             matches = [m for m in matches if m.rule_id in selector]
         if match_key:
             matches = [{match_key: m[match_key]} for m in matches if match_key in m]
-        return matches
+        if not len(matches):
+            return None
+        return meta.converter(matches)
 
 
 class EntityRefProcessor(FieldProcessorBase):

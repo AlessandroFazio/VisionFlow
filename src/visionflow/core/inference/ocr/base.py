@@ -4,7 +4,7 @@ from typing import List
 
 import numpy as np
 
-from visionflow.core.inference.base import InferenceServiceBase
+from visionflow.core.inference.base import InferenceModelBase
 
 
 @dataclass
@@ -21,7 +21,7 @@ class OcrResult:
     text: str
 
 
-class OcrServiceBase(InferenceServiceBase):
+class OcrModelBase(InferenceModelBase):
     @abstractmethod
     def extract(self, img: np.ndarray) -> List[OcrResult]:
         pass

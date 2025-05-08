@@ -2,36 +2,28 @@ from typing import List
 
 from babel.numbers import parse_decimal
 
-from visionflow.core.entity.reflection.types import OcrRegexConverter, RegexGroupDictType
+from visionflow.core.entity.reflection.converter.base import RegexMatcherConverterBase
+from visionflow.core.regex_matcher.base import RegexMatchResult
 
 
-class Converters:
-    @staticmethod
-    def chips_amount(re_gd_list: List[RegexGroupDictType]) -> float:
-        if not re_gd_list:
+class CashAmountConverter(RegexMatcherConverterBase[float]):
+    def convert(self, results: List[RegexMatchResult]) -> float:
+        matches = results[0].matches
+        raw_amount = matches.get("amount")
+        if not raw_amount:
             return None
-        gd = re_gd_list[0]
-        locale = (
-            "it_IT" if str(gd.get("currency", "")) == "€" 
-            else "en_US"
-        )
+        
+        currency = matches.get("currency")
+        locale = "it_IT" if currency == "€" else "en_US"
         try:
-            return float(parse_decimal(str(gd.get("amount", "")), locale=locale))
+            return float(parse_decimal(raw_amount), locale=locale)
         except Exception:
             return None
 
-    @staticmethod
-    def ocr_regex(re_gd_list: List[RegexGroupDictType], key: str) -> OcrRegexConverter:
-        return (
-            re_gd_list[0].get(key) 
-            if re_gd_list else None
-        )
 
-    @staticmethod
-    def seat_state(re_gd_list: List[RegexGroupDictType]) -> OcrRegexConverter:
-        if not re_gd_list:
-            return None
-        states = [s for s in re_gd_list[0].get("state")]
-        return (
-            re_gd_list[0].get("state")
-        )
+class SeatStateConverter(RegexMatcherConverterBase[bool]):
+    def convert(self, results: List[RegexMatchResult]) -> bool:
+        if len(results) != 2:
+            return False
+        text = " ".join(r.matches.get("state", "") for r in results)
+        return text.strip() in ["Posto Vuoto", "Empty Seat"]

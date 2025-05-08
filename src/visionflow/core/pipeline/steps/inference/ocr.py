@@ -1,12 +1,12 @@
 # visionflow/core/pipeline/steps/ocr_extract.py
 
 import dataclasses
-from visionflow.core.inference.ocr.base import OcrServiceBase
+from visionflow.core.inference.ocr.base import OcrModelBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
 class OcrStep(StepBase):
-    def __init__(self, service: OcrServiceBase) -> None:
+    def __init__(self, service: OcrModelBase) -> None:
         super().__init__()
         self.service = service
 

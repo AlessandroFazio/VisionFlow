@@ -1,3 +1,4 @@
+from examples.pokergame.models import Models
 from visionflow.core.pipeline.builder.groups import FilterCrop, FilterCropClassify, FilterMask, OcrRegexMatcher, StepGroup
 from visionflow.core.pipeline.builder.pipeline import PipelineBuilder
 
@@ -9,7 +10,7 @@ class CardRecognizer(StepGroup):
     def apply(self, builder: PipelineBuilder) -> PipelineBuilder: 
         return (
             builder
-              .apply(FilterCropClassify("poker/card_classifier", min_conf=0.70))
+              .apply(FilterCropClassify(Models.card_classifier(), min_conf=0.70))
               .build_entity(Card)
         )
 
@@ -19,7 +20,7 @@ class SeatInfoRecognizer(StepGroup):
       return (
           builder
             .apply(FilterCrop(min_conf=0.70))
-            .apply(OcrRegexMatcher("poker/player_info_ocr", Matchers.seat_info()))
+            .apply(OcrRegexMatcher(Models.player_info_ocr(), Matchers.seat_info()))
             .build_entity(TableSeat)
       )
 
@@ -47,12 +48,12 @@ class ChipsAmountRecognizer(StepGroup):
       return (
           builder
             .apply(FilterCrop(min_conf=0.70))
-              .detect("poker/chips_detector")
+              .detect(Models.chips_amount_detection())
               .split_by_detections()
                 
                 .for_class("chips")
                   .apply(FilterMask(min_conf=0.70))
-                  .apply(OcrRegexMatcher("poker/chips_ocr", Matchers.chips_amount()))
+                  .apply(OcrRegexMatcher(Models.chips_amount_ocr(), Matchers.chips_amount()))
                   .build_entity(ChipsAmount)
                 .end_class()
               

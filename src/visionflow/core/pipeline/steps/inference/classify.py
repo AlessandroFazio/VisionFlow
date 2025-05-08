@@ -1,12 +1,12 @@
 # visionflow/core/pipeline/steps/classify.py
 
 import dataclasses
-from visionflow.core.inference.classification.base import ClassificationServiceBase
+from visionflow.core.inference.classification.base import ClassificationModelBase
 from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
 
 
 class ClassifyStep(StepBase):
-    def __init__(self, service: ClassificationServiceBase) -> None:
+    def __init__(self, service: ClassificationModelBase) -> None:
         super().__init__()
         self.service = service
 

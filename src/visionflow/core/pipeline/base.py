@@ -12,7 +12,7 @@ from prefect.tasks import task_input_hash
 from visionflow.core.inference.classification.base import ClassificationResult
 from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.inference.ocr.base import OcrResult
-from visionflow.core.regex.matchers import RegexMatchResult
+from visionflow.core.regex_matcher.matchers import RegexMatchResult
 
 
 T = TypeVar('T')

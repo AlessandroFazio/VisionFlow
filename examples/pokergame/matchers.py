@@ -1,9 +1,9 @@
-from visionflow.core.regex.base import RegexMatcherBase
-from visionflow.core.regex.builders import RegexMatcherBuilders
+from visionflow.core.regex_matcher.base import RegexMatcherBase
+from visionflow.core.regex_matcher.builders import RegexMatchers
 
 
 class Patterns:
-    CHIPS_AMOUNT = "^(?P<currency>[€$])?\\s*(?P<amount>\\d+[.,]?\\d*)$"
+    CASH_AMOUNT = "^(?P<currency>[€$])?\\s*(?P<amount>\\d+[.,]?\\d*)$"
     PLAYER_ACTION = "^(?P<action>(Check|Fold|Raise|Call|Rilancia|Chiama))$"
     PLAYER_STATE = "^(?P<state>(All-in|In Sit-out))$"
     PLAYER_USERNAME = "^(?P<username>[a-zA-Z0-9_]+)$"
@@ -14,19 +14,22 @@ class Matchers:
     @staticmethod
     def chips_amount() -> RegexMatcherBase:
         return (
-            RegexMatcherBuilders.by_line_matcher()
-                .rule(pattern=Patterns.CHIPS_AMOUNT, first_match=True)
+            RegexMatchers.full_text()
+                .rule(pattern=Patterns.CASH_AMOUNT, first_match=True)
                 .build()
         )
 
     @staticmethod
     def seat_info() -> RegexMatcherBase:
         return (
-            RegexMatcherBuilders.by_line_matcher()
-                .rule(id="username", pattern=Patterns.PLAYER_USERNAME, first_match=True, priority=10)
-                .rule(id="action", pattern=Patterns.PLAYER_ACTION, first_match=True, priority=10)
-                .rule(id="state", pattern=Patterns.PLAYER_STATE, first_match=True, priority=10)
-                .rule(id="stack", pattern=Patterns.CHIPS_AMOUNT, first_match=True, priority=10)
-                .rule(id="seat_state", pattern=Patterns.SEAT_STATE, first_match=True, priority=10)
+            RegexMatchers.line_chunks()
+                .rule(id="player_username", pattern=Patterns.PLAYER_USERNAME, target_linenos=[0], first_match=True, priority=10)
+                .rule(id="player_action", pattern=Patterns.PLAYER_ACTION, target_linenos=[0], first_match=True, priority=5)
+                .rule(id="player_state", pattern=Patterns.PLAYER_STATE, target_linenos=[1], first_match=True, priority=5)
+                .rule(id="player_stack", pattern=Patterns.CASH_AMOUNT, target_linenos=[1], first_match=True, priority=10)
+                .rule(id="seat_state", pattern=Patterns.SEAT_STATE, priority=0)
+                .mutually_exclusive("player_username", "player_action")
+                .mutually_exclusive("player_state", "player_stack")
+                .mutually_exclusive("seat_state", ("player_username", "player_action", "player_state", "player_stack"))
                 .build()
         )

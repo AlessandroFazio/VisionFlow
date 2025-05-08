@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Type
 
 from visionflow.core.entity.base import EntityBase
-from visionflow.core.entity.reflection.meta.field import FieldMeta
+from visionflow.core.entity.reflection.meta.fields import FieldMeta
 from visionflow.core.pipeline.base import Exchange
 
 

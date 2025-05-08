@@ -1,18 +1,8 @@
-from enum import Enum
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from pydantic import BaseModel
 
-
-class ProviderType(Enum):
-    ROBOFLOW = "roboflow"
-    LOCAL_TESSERACT = "tesseract/local"
-
-
-class ServiceType(Enum):
-    DETECTION = "detection"
-    CLASSIFICATION = "classification"
-    OCR = "ocr"
+from visionflow.core.inference.base import InferenceType, ModelProvider
 
 
 class RoboflowModelConfig(BaseModel):
@@ -27,6 +17,6 @@ class TesseractModelConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     name: str
-    type: ServiceType
-    provider: ProviderType
+    inference: InferenceType
+    provider: ModelProvider
     config: Union[RoboflowModelConfig | TesseractModelConfig]

@@ -28,7 +28,7 @@ class EntityRegistryBase(ABC):
         pass
 
     @abstractmethod
-    def parent_candidates(self, entity: EntityBase) -> Iterable[EntityBase]:
+    def parent_candidates(self, entity: EntityBase) -> List[EntityBase]:
         pass
 
     @abstractmethod

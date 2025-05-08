@@ -3,11 +3,11 @@ from typing import Callable, Dict, Optional, Tuple, Type, Union, get_type_hints
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.parent_selector.config import ParentSelectorType
 from visionflow.core.entity.parent_selector.factory import ParentSelectorFactory
-from visionflow.core.entity.reflection.descriptors.base import FieldBase
-from visionflow.core.entity.reflection.descriptors.fields import ClassificationLabel, EntityRef, OcrRegex
+from visionflow.core.entity.reflection.descriptor.base import FieldBase
+from visionflow.core.entity.reflection.descriptor.fields import ClassificationLabel, EntityRef, OcrRegex
 from visionflow.core.entity.reflection.meta.entity import EntityMeta, EntitySource, EntityType
-from visionflow.core.entity.reflection.meta.field import ClassificationLabelConfig, EntityRefConfig, FieldMeta, FieldType, FieldTypeInfo, OcrRegexConfig
-from visionflow.core.entity.sort.config import SortType
+from visionflow.core.entity.reflection.meta.fields import ClassificationLabelConfig, EntityRefConfig, FieldMeta, FieldType, FieldTypeInfo, OcrRegexConfig
+from visionflow.core.entity.sort.config import SortKey, SortType
 from visionflow.core.entity.sort.factory import EntitySortFactory
 from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider
 
@@ -26,6 +26,10 @@ class FieldMetaFactory:
         
         sort_strategy = None
         if sort_type:
+            for i,key in enumerate(desc.sort_keys):
+                if isinstance(key, str):
+                    desc.sort_keys[i] = SortKey.from_value(key)
+
             sort_strategy = EntitySortFactory.create(sort_type, desc.sort_keys)
 
         return FieldMeta(

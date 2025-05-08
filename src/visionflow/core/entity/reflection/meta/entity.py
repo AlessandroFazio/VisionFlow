@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Dict, Optional
 
 from visionflow.core.entity.parent_selector.base import ParentSelectorBase
-from visionflow.core.entity.reflection.meta.field import FieldMeta
+from visionflow.core.entity.reflection.meta.fields import FieldMeta
 from visionflow.core.pipeline.utils.providers import CoordinatesProviderBase
 
 

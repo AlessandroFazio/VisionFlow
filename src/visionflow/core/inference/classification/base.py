@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import List
 
 import numpy as np
-from visionflow.core.inference.base import InferenceServiceBase
+from visionflow.core.inference.base import InferenceModelBase
 
 
 @dataclass
@@ -12,7 +12,7 @@ class ClassificationResult:
     confidence: float
 
 
-class ClassificationServiceBase(InferenceServiceBase):
+class ClassificationModelBase(InferenceModelBase):
     @abstractmethod
     def classify(self, image: np.ndarray) -> List[ClassificationResult]:
         pass

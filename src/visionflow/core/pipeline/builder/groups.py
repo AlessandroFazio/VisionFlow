@@ -6,7 +6,7 @@ from typing import Optional, Tuple, Type
 import cv2
 
 from visionflow.core.pipeline.utils.providers import OcrTextProvider
-from visionflow.core.regex.base import RegexMatcherBase
+from visionflow.core.regex_matcher.base import RegexMatcherBase
 from visionflow.core.types import XyXyType
 from visionflow.core.pipeline.builder.pipeline import PipelineBuilder
 

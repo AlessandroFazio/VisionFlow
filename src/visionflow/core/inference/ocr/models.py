@@ -1,13 +1,13 @@
 from typing import List
 import pandas as pd
-from visionflow.core.inference.mixins.tesseract import TesseractMixin
-from visionflow.core.inference.ocr.base import OcrResult, OcrServiceBase
+from visionflow.core.inference.mixins.tesseract import TesseractModelMixin
+from visionflow.core.inference.ocr.base import OcrResult, OcrModelBase
 
 import numpy as np
 import pytesseract
 
 
-class LocalTesseractService(OcrServiceBase, TesseractMixin):
+class PyTesseractModel(OcrModelBase, TesseractModelMixin):
     def extract(self, img: np.ndarray) -> List[OcrResult]:
         df: pd.DataFrame = pytesseract.image_to_data(
             img, lang=self.lang, config=self.config, output_type='data.frame'
