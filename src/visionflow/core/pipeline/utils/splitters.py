@@ -10,9 +10,14 @@ class ExchangeSplitterBase(ABC):
     def split(self, exchange: Exchange) -> List[Exchange]:
         pass
 
-class DetectionExchangeSplitter(ExchangeSplitterBase):
+class DetectionSplitter(ExchangeSplitterBase):
     def split(self, exchange: Exchange) -> List[Exchange]:
         return [
             dataclasses.replace(exchange, detections=[det])
             for det in exchange.detections
         ]
+        
+        
+class ZeroSplitter(ExchangeSplitterBase):
+    def split(self, exchange: Exchange) -> List[Exchange]:
+        return [exchange]

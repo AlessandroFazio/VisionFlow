@@ -2,33 +2,32 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
-import uuid
+from multiprocessing import RLock
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-from prefect import Flow, Task, task
-from prefect.tasks import task_input_hash
 
 from visionflow.core.entity.registry.base import EntityRegistryBase
 from visionflow.core.inference.classification.base import ClassificationResult
 from visionflow.core.inference.detection.base import DetectionResult
 from visionflow.core.inference.ocr.base import OcrResult
+from visionflow.core.pipeline.backend.base import StepDispatcherBase
 from visionflow.core.regex_matcher.matchers import RegexMatchResult
 
 
-T = TypeVar('T')
-
 @dataclass(frozen=True)
 class Exchange:
-    execution_id: str
     image: np.ndarray
     original_image_shape: Tuple[int, int]
-    entity_registry: EntityRegistryBase
     detections: List[DetectionResult] = field(default_factory=list)
     classifications: List[ClassificationResult] = field(default_factory=list)
     ocr_results: List[OcrResult] = field(default_factory=list)
     ocr_regex_matches: List[RegexMatchResult] = field(default_factory=list)
-    private: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def from_image(cls, img: np.ndarray) -> "Exchange":
+        img_h, img_w = img.shape[:2]
+        return cls(image=img, original_image_shape=(img_w, img_h))
 
 
 @dataclass(frozen=True)
@@ -43,54 +42,66 @@ class ValidationResult:
     @classmethod
     def with_error(cls, *errors: str, step: "StepBase") -> "ValidationResult":
         return cls(ok=False, step=step, violations=list(errors))
+        
+        
+@dataclass(frozen=True)
+class StepRunContext:
+    entity_registry: EntityRegistryBase
+    dispatcher: StepDispatcherBase
+    exchange: Exchange
+    _private = field(init=False, default_factory=dict)
+    _lock = field(init=False, default_factory=RLock)
+    
+    def put_private(self, key: str, value: Any) -> None:
+        with self._lock:
+            self._private[key] = value
+
+    def get_private(self, key: str) -> Any:
+        with self._lock:
+            return self._private[key]
 
 
-class PipelineContext:
-    def __init__(self) -> None:
-        self._ctx_dict = {}
-
-    def put(self, key: str, value: Any) -> None:
-        if key in self._ctx_dict:
-            raise ValueError()
-        self._ctx_dict[key] = value
-
-    def get(self, key: str, expect_type: Type[T]) -> T:
-        if key not in self._ctx_dict:
-            raise ValueError("")
-        value = self._ctx_dict[key]
-        if not isinstance(value, expect_type):
-            raise ValueError("")
-        return value
+@dataclass
+class RuntimeOptions:
+    cache_expiration: Optional[timedelta] = None
+    retries: Optional[int] = None
+    retry_delay_seconds: Optional[int] = None
+    concurrency_limit: Optional[str] = None
 
 
 class StepBase(ABC):
-    def __init__(self, name: Optional[str]=None, cache_mins: int=-1) -> None:
+    def __init__(
+        self,
+        name: Optional[str]=None, 
+        runtime_options: Optional[RuntimeOptions]=None, 
+        tags: Dict[str, Any]=None
+    ) -> None:
         self.name = name or self.__class__.__name__
-        self.cache_mins = cache_mins
+        self.runtime_options = runtime_options or RuntimeOptions()
+        self.tags = tags or {}
 
     @abstractmethod
-    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
+    def process(self, context: StepRunContext) -> StepRunContext:
         pass
-
-    def _execution_id(self) -> str:
-        return f"{self.name}-{str(uuid.uuid4())}"
 
     def validate(self) -> ValidationResult:
         return ValidationResult(ok=True, step=self)
-
-    def to_prefect(self) -> Union[Flow | Task]:
-        task_deco = task
-        if self.cache_mins > 0:
-            task_deco = lambda name: task(
-                name=name,
-                cache_key_fn=task_input_hash,
-                cache_expiration=timedelta(minutes=self.cache_mins)
-            )
-
-        @task_deco(name=self.name)
-        def step_task(context: PipelineContext, exchange: Exchange) -> Exchange:
-            return self.process(context, exchange)
-        return step_task
     
     def explain(self, depth: int = 0) -> str:
         return f"{'  ' * depth}- {self.name}"
+    
+    
+class CompositeStep(StepBase):
+    @abstractmethod
+    def steps(self) -> List[StepBase]:
+        pass
+    
+    @abstractmethod
+    def rebuild_with_steps(self, steps: List[StepBase]) -> "CompositeStep":
+        """Return a new instance with the given steps substituted in."""
+        pass
+
+    def validate(self) -> ValidationResult:
+        validations = (step.validate() for step in self.steps())
+        failures = [v for v in validations if not v.ok]
+        return ValidationResult(ok=bool(len(failures)), step=self)

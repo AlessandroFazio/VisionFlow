@@ -1,59 +1,37 @@
-from typing import Callable, List, Union
+from typing import Any, Dict, List, Optional
 
-import cv2
-import numpy as np
-from prefect import Flow, Task, flow
-from visionflow.core.entity.registry.base import EntityRegistryBase
-from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase, ValidationResult
+from visionflow.core.pipeline.base import CompositeStep, Exchange, RuntimeOptions, StepBase, StepRunContext
 
 
-class Pipeline(StepBase):
-    def __init__(self, name: str, steps: List[StepBase], context: PipelineContext) -> None:
-        self.steps = steps
-        self.context = context
-        super().__init__(name=name)
+class Pipeline(CompositeStep):
+    def __init__(
+        self, 
+        name: str, 
+        steps: List[StepBase], 
+        runtime_options: Optional[RuntimeOptions]=None,
+        tags: Optional[Dict[str, Any]]=None
+    ) -> None:
+        super().__init__(name=name, runtime_options=runtime_options, tags=tags)
+        self._steps = steps
     
-    def _load_image(self, img_bytes: bytes) -> np.ndarray:
-        img = np.frombuffer(img_bytes, np.uint8)
-        img = cv2.imdecode(img, cv2.IMREAD_COLOR)
-        return img
+    def steps(self) -> List[StepBase]:
+        return self._steps
     
-    def _dispatch(self, context: PipelineContext, exchange: Exchange, executors: List[Callable[[PipelineContext, Exchange], Exchange]]) -> Exchange:
-        for executor in executors:
-            exchange = executor(context, exchange)
+    def rebuild_with_steps(self, steps: List[StepBase]) -> "CompositeStep":
+        return Pipeline(self.name, steps, self.runtime_options, self.tags)
+    
+    def run(self, context: StepRunContext) -> Exchange:
+        return self.process(context)
+    
+    def process(self, context: StepRunContext) -> StepRunContext:
+        for step in self._steps:
+            result = context.dispatcher.submit(step, context)
+            exchange = result.get()
         return exchange
-
-    def run(self, img_bytes: bytes) -> Exchange:
-        img = self._load_image(img_bytes)
-        img_h, img_w = img.shape[:2]
-        exchange = Exchange(
-            execution_id=self._execution_id(), 
-            image=img,
-            original_image_shape=(img_w, img_h),
-            entity_registry=self.context.get(EntityRegistryBase.pipeline_ctx_key(), EntityRegistryBase)
-        )
-        return self.process(self.context, exchange)
-    
-    def process(self, context: PipelineContext, exchange: Exchange) -> Exchange:
-        return self._dispatch(context, exchange, [step.process for step in self.steps])
-
-    def to_prefect(self) -> Union[Task, Flow]:
-        tasks = [step.to_prefect() for step in self.steps]
-        
-        @flow(name=self.name)
-        def pipeline_flow(context: PipelineContext, exchange: Exchange) -> Exchange:
-            return self._dispatch(context, exchange, tasks)
-
-        return pipeline_flow
-
-    def validate(self) -> ValidationResult:
-        validations = (step.validate() for step in self.steps)
-        failures = [v for v in validations if not v.ok]
-        return ValidationResult(ok=bool(len(failures)), step=self)
     
     def explain(self, depth: int = 0) -> str:
         lines = [f"Pipeline: {self.name}"]
-        for step in self.steps:
+        for step in self._steps:
             lines.append(step.explain(depth + 1))
         return "\n".join(lines)
 

@@ -1,24 +1,23 @@
 # visionflow/core/pipeline/dsl.py
 
-from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Tuple, Type, Set
 
 import cv2
 
 from visionflow.core.entity.base import EntityBase
 from visionflow.core.entity.factory import EntityFactory
 from visionflow.core.entity.iterator.hierarchy import EntityHierarchyIterator
-from visionflow.core.entity.registry.base import EntityRegistryBase
-from visionflow.core.entity.registry.registries import GraphEntityRegistry
+from visionflow.core.entity.registry.base import EntityRegistryVisitorBase
 from visionflow.core.entity.registry.visitors import EntityRegistryResolver
 from visionflow.core.entity.utils import Entity
 from visionflow.core.inference.classification.base import ClassificationModelBase
 from visionflow.core.inference.detection.base import DetectionModelBase
 from visionflow.core.inference.ocr.base import OcrModelBase
-from visionflow.core.pipeline.base import Exchange, PipelineContext, StepBase
+from visionflow.core.pipeline.base import StepBase, StepRunContext
 from visionflow.core.pipeline.steps.inference.classify import ClassifyStep
 from visionflow.core.pipeline.steps.entity.build_entity import BuildEntityStep
 from visionflow.core.pipeline.steps.entity.resolve_entity import ResolveEntityStep
-from visionflow.core.pipeline.steps.utility.split_by import SplitByStep
+from visionflow.core.pipeline.steps.utility.branch import BranchStep
 from visionflow.core.pipeline.steps.inference.ocr import OcrStep
 from visionflow.core.pipeline.steps.inference.detect import DetectStep
 from visionflow.core.pipeline.steps.inference.filter import FilterStep
@@ -29,8 +28,8 @@ from visionflow.core.pipeline.steps.transforms.binarize import BinarizeStep
 from visionflow.core.pipeline.steps.transforms.mask import MaskStep
 from visionflow.core.pipeline.steps.transforms.crop import CropStep
 from visionflow.core.pipeline.steps.transforms.resize import ResizeStep
-from visionflow.core.pipeline.utils.matchers import BranchMatcherBase, DetectionClassMatcher
-from visionflow.core.pipeline.utils.splitters import DetectionExchangeSplitter, ExchangeSplitterBase
+from visionflow.core.pipeline.utils.selector import StepSelectorBase, DetectionClassSeletector
+from visionflow.core.pipeline.utils.splitters import DetectionSplitter, ExchangeSplitterBase
 from visionflow.core.pipeline.utils.providers import DetectionCoordinatesProvider, StaticCoordinatesProvider, TextProviderBase
 from visionflow.core.regex_matcher.base import RegexMatcherBase
 from visionflow.core.types import XyXyType
@@ -47,19 +46,23 @@ class PipelineBuilder:
     ):
         self.name = name
         self._parent = parent
+        self._tags = {}
         self._steps: List[StepBase] = []
-        self._split_builder: "SplitBuilder" = None
-        self._entity_registry: "EntityRegistryBase" = (
-            self._parent._entity_registry 
-            if parent else GraphEntityRegistry()
-        )
-        self._bound_entities: set[str] = (
-            parent._bound_entities 
-            if parent else set()
-        )
+        self._branch_builder: "BranchBuilder" = None
+        self._init_or_inherit(parent)
+        
+    def _init_or_inherit(self, parent: "PipelineBuilder") -> None:
+        if parent:
+            self._bound_entities = parent._bound_entities
+        else:
+            self._bound_entities: Set[str] = set()
 
     def then(self, step: StepBase) -> "PipelineBuilder":
         self._steps.append(step)
+        return self
+    
+    def with_tags(self, **kwargs) -> "PipelineBuilder":
+        self._tags.update(**kwargs)
         return self
     
     def binarize(self, normalize: bool=False) -> "PipelineBuilder":
@@ -95,30 +98,27 @@ class PipelineBuilder:
     def ocr_regex_match(self, matcher: RegexMatcherBase, provider: TextProviderBase) -> "PipelineBuilder":
         return self.then(OcrRegexMatchStep(matcher, provider))
     
-    def _split_by(self) -> "SplitBuilder":
-        self._split_builder = SplitBuilder(self)
-        return self._split_builder
+    def branches(self) -> "BranchBuilder":
+        self._branch_builder = BranchBuilder(self)
+        return self._branch_builder
     
-    def _end_branch(self) -> "SplitBuilder":
-        return self._split_builder
+    def end_branches(self) -> "BranchBuilder":
+        return self._branch_builder
     
-    def end_class(self) -> "DetectionSplitBuilder":
-        return self._end_branch()
+    def end_class(self) -> "DetectionBranchBuilder":
+        return self.end_branches()
     
-    def split_by_detections(self) -> "DetectionSplitBuilder":
-        self._split_builder = DetectionSplitBuilder(parent=self)
-        return self._split_builder
+    def branch_detections(self) -> "DetectionBranchBuilder":
+        self._branch_builder = DetectionBranchBuilder(parent=self)
+        return self._branch_builder
 
-    def process(self, fn: Callable[[PipelineContext, Exchange], Exchange]) -> "PipelineBuilder":
+    def process(self, fn: Callable[[StepRunContext], StepRunContext]) -> "PipelineBuilder":
         return self.then(ProcessStep(fn))
     
-    def build_entity(self, *classes: Type[EntityBase]) -> "PipelineBuilder":
+    def build_entities(self, *classes: Type[EntityBase]) -> "PipelineBuilder":
         if not classes:
             raise ValueError("At least one entity class is required")
-
-        for cls in classes:
-            self._entity_registry.register_class(cls)
-
+        
         for cls in classes:
             for cls_in_h in EntityHierarchyIterator(cls):
                 name = Entity.name(cls_in_h)
@@ -132,16 +132,12 @@ class PipelineBuilder:
     def apply(self, group: "StepGroup") -> "PipelineBuilder":
         return group.apply(self)
     
-    def _build_context(self) -> PipelineContext:
-        context = PipelineContext()
-        context.put(EntityRegistryBase.pipeline_ctx_key(), self._entity_registry)    
-        return context
-
+    def resolve_entities(self, resolver: Optional[EntityRegistryVisitorBase]=None) -> "PipelineBuilder":
+        resolver = resolver or EntityRegistryResolver.default()
+        return self.then(ResolveEntityStep(resolver))
+    
     def build(self) -> Pipeline:
-        if not self._parent:
-            self.then(ResolveEntityStep(EntityRegistryResolver.default()))
-
-        pipeline = Pipeline(self.name, self._steps, self._build_context())
+        pipeline = Pipeline(self.name, self._steps)
         validation = pipeline.validate()
         if not validation.success():
             raise ValueError("")
@@ -149,35 +145,39 @@ class PipelineBuilder:
         return pipeline
 
 
-class SplitBuilder:
+class BranchBuilder:
     def __init__(
         self, 
         parent: PipelineBuilder, 
-        matcher: BranchMatcherBase, 
-        exchange_splitter: ExchangeSplitterBase
+        selector: StepSelectorBase, 
+        splitter: ExchangeSplitterBase
     ) -> None:
         self._parent = parent
-        self._matcher = matcher
-        self._exchange_splitter = exchange_splitter
+        self._selector = selector
+        self._splitter = splitter
         self._branch_builders: Dict[str, PipelineBuilder] = {}
     
-    def _branch(self, name: str) -> PipelineBuilder:
+    def branch(self, name: str) -> PipelineBuilder:
+        qualname = f"{self._parent.name}||{name}"
         builder = PipelineBuilder(name, parent=self._parent)
         self._branch_builders[name] = builder
         return builder
 
-    def end_split(self) -> PipelineBuilder:
+    def end_branch(self) -> PipelineBuilder:
         branches = {name: bb.build() for name, bb in self._branch_builders.items()}
-        return self._parent.then(SplitByStep(branches))
+        return self._parent.then(BranchStep(branches))
     
 
-class DetectionSplitBuilder(SplitBuilder):
+class DetectionBranchBuilder(BranchBuilder):
     def __init__(self, parent: PipelineBuilder) -> None:
         super().__init__(
             parent=parent, 
-            matcher=DetectionClassMatcher(), 
-            exchange_splitter=DetectionExchangeSplitter()
+            selector=DetectionClassSeletector(), 
+            splitter=DetectionSplitter()
         )
 
     def for_class(self, detection_class: str) -> "PipelineBuilder":
-        return self._branch(detection_class)
+        return (
+            self.branch(detection_class)
+                .with_tags(detection_class=detection_class)
+        )

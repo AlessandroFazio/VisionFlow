@@ -1,50 +1,28 @@
-import PIL
-import PIL.Image
+from prefect import flow
 
-from examples.pokergame.models import Models
+from examples.pokergame.pipelines import Pipelines
+from visionflow.core.image_source.factory import ImageSourceFactory
 from visionflow.core.visionflow import VisionFlow
 
 from .entities import PokerTable
-from .recognizers import CardRecognizer, ChipsAmountRecognizer, DealerButtonRecognizer, PlayerInRecognizer, SeatInfoRecognizer
 
 
-def main():    
-    img_path = ""
-    img_bytes = PIL.Image.open(img_path).tobytes()
-
-    pipeline = (
-        VisionFlow.pipeline("pokerstars_recognizer")
-          .detect(Models.table_detection())
-          .split_by_detections()
-            
-            .for_class("card")
-              .apply(CardRecognizer())
-            .end_class()
-            
-            .for_class("player_info")
-              .apply(SeatInfoRecognizer())
-            .end_class()
-            
-            .for_class("player_in")
-              .apply(PlayerInRecognizer())
-            .end_class()
-            
-            .for_class("dealer_button")
-              .apply(DealerButtonRecognizer())
-            .end_class()
-            
-            .for_class("chips_amount")
-              .apply(ChipsAmountRecognizer())
-            .end_class()
-            
-          .end_split()        
-          .build_entity(PokerTable)
-          
-          .build()
-      )
+@flow(name="example")
+def pokertable_pipeline(config: dict):
+    backend = VisionFlow.prefect_backend()
     
-    pipeline.run(img_bytes)
+    source = ImageSourceFactory.from_dict(config)
+    contexts = [
+      (
+        VisionFlow.run_context()
+          .with_image(image)
+          .with_entities(PokerTable)
+          .with_backend(backend)
+      ) for image in source.images()
+    ]
+
+    backend.run_batch(Pipelines.poker_table(), contexts)
 
 
 if __name__ == "__main__":
-    main()
+    pokertable_pipeline.deploy(...)

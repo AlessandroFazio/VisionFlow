@@ -11,7 +11,7 @@ class CardRecognizer(StepGroup):
         return (
             builder
               .apply(FilterCropClassify(Models.card_classifier(), min_conf=0.70))
-              .build_entity(Card)
+              .build_entities(Card)
         )
 
 
@@ -23,7 +23,7 @@ class SeatInfoRecognizer(StepGroup):
             .resize((2,2))
             .binarize()
             .apply(OcrRegexMatcher(Models.player_info_ocr(), Matchers.seat_info()))
-            .build_entity(TableSeat)
+            .build_entities(TableSeat)
       )
 
 
@@ -32,7 +32,7 @@ class PlayerInRecognizer(StepGroup):
       return (
           builder
             .filter(min_conf=0.70)
-            .build_entity(PlayerIn)
+            .build_entities(PlayerIn)
       )
 
  
@@ -41,7 +41,7 @@ class DealerButtonRecognizer(StepGroup):
       return (
           builder
             .filter(min_conf=0.70)
-            .build_entity(DealerButton)
+            .build_entities(DealerButton)
       )
 
 
@@ -51,15 +51,15 @@ class ChipsAmountRecognizer(StepGroup):
           builder
             .apply(FilterCrop(min_conf=0.70))
               .detect(Models.chips_amount_detection())
-              .split_by_detections()
+              .branch_detections()
                 
                 .for_class("chips")
                   .apply(FilterMask(min_conf=0.70))
                   .resize((2,2))
                   .binarize()
                   .apply(OcrRegexMatcher(Models.chips_amount_ocr(), Matchers.chips_amount()))
-                  .build_entity(ChipsAmount)
+                  .build_entities(ChipsAmount)
                 .end_class()
               
-              .end_split()
+              .end_branch()
       )
